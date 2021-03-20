@@ -15,17 +15,32 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Google Docs Module Version Details
+ * @copyright 2021 Veronica Bermegui
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  *
- * @package    mod_googleactivity
- * @copyright  2019 Michael de Raadt <michaelderaadt@gmail.com>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+namespace mod_googleactivity\external;
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2021031304;
-$plugin->requires  = 2016052300; // Moodle 3.1
-$plugin->maturity  = MATURITY_ALPHA;
-$plugin->release   = 'Version for Moodle 3.1 onwards';
-$plugin->component = 'mod_googleactivity';
+require_once($CFG->libdir.'/externallib.php');
+
+use external_api;
+
+class api extends external_api {
+    use create_students_files;
+    // use create_group_file;
+    // use create_grouping_file;
+    // use create_group_grouping_file;
+    // use create_group_folder_struct;
+    // use delete_files;
+    // use update_sharing;
+    // use submit_student_file;
+    // use google_login_student;
+    // use grade_student_file;
+    // use save_quick_grading;
+    // use get_participant;
+    // use list_participants;
+    // use get_participant_by_id;
+}

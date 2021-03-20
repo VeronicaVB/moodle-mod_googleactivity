@@ -1,0 +1,99 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @package   mod_googleactivity
+    @copyright 2021 Veronica Bermegui
+    @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+
+{{!
+    @template mod_googleactivity/group_table
+
+    Google docs group content template.
+
+    Example context (json):
+
+           {
+            "groups": [
+                {
+                    "groupid": "1",
+                    "groupname": "Group A",
+                    "fileicon": "<a target="_blank" id="shared_link_url_1" href="0"><img src="http://localhost/cgs/moodle/mod/googleactivity/pix/document.svg" class="link_icon" /></a>",
+                    "sharing_status": "<div id="status_col"></div>"
+                },            
+                {
+                    "picture": "<a href="http://localhost/cgs/moodle/user/view.php?id=10&amp;course=3">
+                                <img src="http://localhost/cgs/moodle/theme/image.php/boostcgs/core/1598492027/u/f2" class="userpicture defaultuserpic" width="35" height="35" alt="Picture of Alex T" title="Picture of Alex T" />Alex T</a>",
+                    "fullname": "Alex T",
+                    "link": "<a target="_blank" id="link_file_0" href="">
+                             <img src="http://localhost/cgs/moodle/mod/googleactivity/pix/document.svg" class="link_icon" />
+                             </a>",
+                    "status": "<div id="file_0"></div>",
+                    "student-id": "10",
+                    "student-email": "alex@staff.com",
+                    "groupid": "1"
+                },
+            ],
+
+            "googledocid": "1HgHissGCrTqTjm4rbOKe2CApJbPUri0BPBkECH6mrEc",
+            "owneremail": "vero.web.dev.practice@gmail.com",
+            "members": [],
+            "instanceid": "1"
+            }
+
+}}
+
+<div class="container-fluid table-container table-responsive">
+    {{> mod_googleactivity/show_activity_description }}
+    <table id = "table-body" class="mod-googleactivity-files-view  table-bordered table-lg overviewTable table table-hover" 
+        data-googleactivity-id = "{{googleactivityid}}" data-owner-email = "{{owneremail}}"
+        data-instance-id = "{{instanceid}}" data-from-existing = "{{from_existing}}" 
+        data-all-groups = "{{all_groups}}" data-isfolder = "{{isfoldertype}}">
+        <thead class="thead-light">
+            <tr>
+                <th class="header ">{{#str}} groupheader, mod_googleactivity{{/str}}</th>  
+                <th class="header ">{{#str}} memberheader, mod_googleactivity{{/str}}</th>
+                <th class="header">{{#str}} linkheader, mod_googleactivity{{/str}}</th>
+                <th class="header">{{#str}} statusheader, mod_googleactivity{{/str}}</th>
+                <th class="header">{{#str}} studentaccessheader, mod_googleactivity{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody >
+            {{#groups}}
+            {{#groupname}}
+                <tr id = "group_{{groupid}}" aria-expanded="false"
+                    aria-controls="group-{{groupid}}" data-group-name="{{groupname}}"
+                    data-group-id="{{groupid}}" >
+                    <td class="group-name-column" >
+                        <span >{{groupname}}<span>
+                    </td>
+                    <td>{{{user_pictures}}}</td>
+                    <td id = "shared-link-group-id-{{groupid}}" class = "status-link-column">
+                        {{{fileicon}}}
+                    </td>
+                    <td class = "status-link-column">{{{sharing_status}}}</td>
+                    <td class = "status-link-column">{{{student_access}}}</td>
+                </tr>
+            {{/groupname}}
+        </tbody>
+        {{#student-id}}
+            <tbody class = "table-striped collapse" id ="group-members-{{groupid}}">
+                <tr data-student-id = "{{student-id}}" data-student-email="{{student-email}}" student-group-id="{{groupid}}" student-name="{{fullname}}"></tr>
+            </tbody>
+        {{/student-id}}
+     {{/groups}}
+    </table>
+</div>

@@ -1,0 +1,66 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @package   mod_googleactivity
+    @copyright 2020 Veronica Bermegui
+    @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+
+<div class="container-fluid table-container">
+
+ {{> mod_googleactivity/show_activity_description }}
+
+    <table class = "mod-googleactivity-files-view  table-bordered table-lg overviewTable table table-hover"
+        data-googleactivity-id = "{{googleactivityid}}"  data-instance-id = "{{instanceid}}"
+        data-from-existing = "{{from_existing}}" data-owner-email = "{{owneremail}}"
+        data-all-groups="{{all_groups}}" data-file-name="{{docname}}">
+        <input type ='hidden' id = 'simulation' </input>
+        <thead>
+            <tr>
+                <th class ="table-student-columns">{{#str}} fullnameheader, mod_googleactivity{{/str}}</th>
+                <th class ="table-student-columns">{{#str}} linkheader, mod_googleactivity{{/str}}</th>
+                <th class ="table-student-columns">{{#str}} studentaccessheader, mod_googleactivity{{/str}}</th>
+                <th class ="table-student-columns">{{#str}} statusheader, mod_googleactivity{{/str}}</th>
+                {{#canbegraded}}
+                    <th class ="table-student-columns">{{#str}} gradeheader, mod_googleactivity{{/str}}</th>
+                {{/canbegraded}}
+            </tr>
+        </thead>
+
+        <tbody id = 'table-body' class = "table-striped">
+            {{#students}}
+                <tr data-student-id ="{{student-id}}" data-student-email="{{student-email}}" student-name="{{fullname}}"
+                    student-group-id ="{{student-groupid}}">
+                    <td  class="fullname-column">{{{picture}}}</td>
+                    <td>{{{link}}}</td>
+                    <td>{{{access}}} </td>
+                    <td>{{{status}}} </td>
+                    {{#canbegraded}}
+                        {{^beengraded}}
+                            <td>
+                                <a href= "{{{gradeurl}}}" class="btn btn-primary btn-grade" role = "button">{{#str}} gradeheader, mod_googleactivity{{/str}}</a>
+                            </td>
+                       {{/beengraded}}
+                       {{#beengraded}}
+                        <td>
+                            <a href= "{{{gradeurl}}}" class="" role = "button">{{gradevalue}}</a>
+                        </td>
+                       {{/beengraded}}
+                    {{/canbegraded}}
+            {{/students}}
+        </tbody>
+    </table>
+</div>

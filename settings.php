@@ -15,16 +15,16 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The global googledocs configuration form
+ * The global googleactivity configuration form
  *
  * It uses the standard core Moodle formslib. For more info about them, please
  * visit: http://docs.moodle.org/en/Development:lib/formslib.php
  *
- * @package    mod_googledocs
+ * @package    mod_googleactivity
  * @copyright  2019 Michael de Raadt <michaelderaadt@gmail.com>
+ *             2020 Veronica Bermegui
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 defined('MOODLE_INTERNAL') || die;
 
 if ($ADMIN->fulltree) {
@@ -33,18 +33,44 @@ if ($ADMIN->fulltree) {
     $choices = [];
     $issuers = \core\oauth2\api::get_all_issuers();
     foreach ($issuers as $issuer) {
-        if (strpos($issuer->get('baseurl'),'accounts.google.com') !== FALSE) {
+        if (strpos($issuer->get('baseurl'), 'accounts.google.com') !== false) {
             $choices[$issuer->get('id')] = s($issuer->get('name'));
         }
     }
 
     // Output a link to configure OAuth settings.
     $url = new moodle_url('/admin/tool/oauth2/issuers.php');
-    $settings->add(new admin_setting_heading('googledocs_oauthlink', '', get_string('oauth2link', 'googledocs', $url->out())));
+    $settings->add(new admin_setting_heading('googleactivity_oauthlink', '', get_string('oauth2link', 'googleactivity', $url->out())));
 
     // Output list of OAuth issuers.
     if (!empty($choices)) {
-        $settings->add(new admin_setting_configselect('googledocs_oauth', get_string('oauth2services', 'googledocs'),
-                                                      get_string('oauth2servicesdesc', 'googledocs'), NULL, $choices));
+        $settings->add(new admin_setting_configselect('googleactivity_oauth', get_string('oauth2services', 'googleactivity'),
+                get_string('oauth2servicesdesc', 'googleactivity'), null, $choices));
     }
+
+    $settings->add(new admin_setting_configtext('mod_googleactivity/googleactivity_api_key', get_string('googleactivity_api_key', 'googleactivity'),
+            get_string('googleactivity_api_key_desc', 'googleactivity'), ''));
+
+    $settings->add(new admin_setting_configtext('mod_googleactivity/referrer', get_string('googleactivity_referrer', 'googleactivity'),
+            get_string('googleactivity_referrer_key_desc', 'googleactivity'), ''));
+
+    $menu = array();
+    foreach (core_component::get_plugin_list('assignfeedback') as $type => $notused) {
+        $visible = !get_config('assignfeedback_' . $type, 'disabled');
+        if ($visible) {
+
+            if ($type == 'comments') {
+                $menu['assignfeedback_' . $type] = new lang_string('pluginname', 'assignfeedback_' . $type);
+            }
+        }
+    }
+
+    // The default here is feedback_comments (if it exists).
+    $name = new lang_string('feedbackplugin', 'mod_googleactivity');
+    $description = new lang_string('feedbackpluginforgradebook', 'mod_googleactivity');
+    $settings->add(new admin_setting_configselect('googleactivity/feedback_plugin_for_gradebook',
+            $name,
+            $description,
+            'assignfeedback_comments',
+            $menu));
 }

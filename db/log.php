@@ -18,7 +18,7 @@
 /**
  * Definition of log events
  *
- * @package    mod_googledocs
+ * @package    mod_googleactivity
  * @category   log
  * @copyright  2019 Michael de Raadt <michaelderaadt@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

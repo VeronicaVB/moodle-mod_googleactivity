@@ -1,0 +1,394 @@
+/* 
+    Created on : 13 Mar 2021
+    Author     : Veronica Bermegui.
+*/
+
+body#page-mod-googleactivity-view_grading_app {
+    overflow: hidden !important;
+}
+/*Group and Grouping  elements*/
+select#id_groups {
+    width: 70%;
+}
+
+select#id_groupings {
+    width: 22%;
+}
+
+td.group-name-column {
+    width: 10%;
+    font-weight: bold;
+}
+td.pic-name {
+    text-align: left;
+}
+
+td.status-link-column {
+    width: 20%;
+}
+
+td.grouping_name_cell {
+    display: table-cell;
+    vertical-align: middle !important;
+    width: 20%;
+}
+
+/*Students table table elements*/
+td.fullname-column {
+    text-align: left;
+}
+
+img.pic{
+    margin-left: 20%;
+
+}
+
+th.table-student-columns{
+    width: 20%;
+}
+
+th.checkbox-column {
+    width: 4%;
+}
+
+.status-access {
+    font-size: medium;
+}
+
+/*Group and Grouping Tables commonalities*/
+
+.container-fluid.table-container {
+    margin-top: 2%;
+}
+
+table.mod-googleactivity-files-view.table-bordered.table-lg.overviewTable {
+    text-align: center;
+    background-color: #FFFFFF;
+    width: 100%;
+}
+
+
+.process_message {
+    font-weight: bold;
+    margin-top: 25px;
+    text-align: center;
+}
+
+.link_icon {
+    width: 35px;
+    text-align: center;
+}
+.progress_bar.processing {
+    display: inline-block;;
+}
+
+.spinner-border.color{
+    color:#3498db;
+}
+
+.btn.success {
+    color: #fff;
+    background-color: rgba(17,119,209,.75);
+}
+
+.failed {
+    color: #fff;
+    background-color: #d43f3a;     
+}
+
+.tag_doc {
+    display: inline-block;
+    padding: .25em .4em;
+    font-size: 90%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    -webkit-transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    -o-transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+
+/*Processing spinner properties*/
+
+.spinner-border.processing {
+    width: 120px;
+    height: 120px;
+    border: 16px solid #f3f3f3;
+    border-top: 16px solid #3498db;
+}
+
+.d-flex.justify-content-center.overlay {
+    background-color: rgba(204, 204, 204, 0.57);
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 10000;
+}
+
+/*Google login Style*/
+
+.login-google{
+    display:none;
+    text-align: center;
+    padding-top: 5%
+}
+
+div#viewfolder {
+    margin: auto;
+}
+/*Grading Style*/
+.path-mod-googleactivity [data-region="grading-navigation"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /*    height: 6em;*/
+    margin: 0;
+    padding: 6px;
+    background-color: #fff;
+
+}
+
+.path-mod-googleactivity [data-region="grade"] {
+    position: absolute;
+    top: 85px;
+    right: 0;
+    left: 70%;
+    width: 30%;
+    overflow: auto;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    background-color: #f5f5f5;
+    padding: 15px;
+    padding-top: 0;
+    -webkit-transition: width .5s,right .5s,left .5s;
+    -moz-transition: width .5s,right .5s,left .5s;
+    -o-transition: width .5s,right .5s,left .5s;
+    transition: width .5s,right .5s,left .5s;
+}
+
+.grademessage {
+    margin-top: 5%;
+}
+
+.grading-panel {
+    background-color: #f5f5f5;
+    display: inline-block;
+    margin-right: auto;
+    margin-top: 1px;
+    width: 70%;
+}
+
+iframe#ifile {
+    width: 100%;
+    height: 100%;
+    margin-left: 15px;
+    background-color: ghostwhite;
+
+}
+
+.row.grading-container {
+    margin-bottom: 2%;
+}
+
+div#grading-panel-container {
+    background-color: #f5f5f5;
+    left: 0;
+    width: 100%;
+    overflow:hidden;
+    height: calc(100% - 85px);
+    padding: 0;
+    width: 101%;
+}
+span.input-group-text.bg-success-graded {
+    color: #1c3f1a;
+    background-color: #d7e4d6;
+    border-color: #c6dac6;
+}
+
+.grade-div {
+    text-align: center;
+    margin-top: 2%;   
+}
+
+.grade-input {
+    max-width: 80px;
+    margin-bottom: 10px;
+}
+textarea.textarea-comment {
+    display: block;
+    margin: 1% auto;
+}
+
+.quickgrademodified {
+    background-color: #fc9;
+}
+
+button.btn.btn-primary.ml-1.submit-comment {
+    margin-top: 2%;
+}
+
+
+[data-region="user-info"] .img-rounded {
+    border-radius: 50%;
+    display: block;
+    float: left;
+    margin-top: -3px;
+    margin-right: 10px;
+}
+
+[data-region="user-info"] em {
+    display: block;
+    font-style: normal;
+}
+
+[data-region="user-info"] em.nowrap {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+[data-region="user-selector"] select {
+    margin-bottom: 0;
+}
+
+[data-region="user-selector"] .alignment {
+    float: right;
+    /*  width: 245px;*/
+    text-align: center;
+    margin-top: 1px;
+}
+
+[data-region="user-selector"] [data-action="previous-user"],
+[data-region="user-selector"] [data-action="next-user"] {
+    font-size: 26px;
+}
+
+[data-region="user-selector"] [data-action="next-user"] {
+    margin-left: 6px;
+}
+
+[data-region="user-selector"] .alignment input {
+    margin-bottom: 5px;
+}
+
+[data-region="user-selector"] .alignment .form-autocomplete-downarrow {
+    top: 0;
+}
+
+[data-region="grade"].collapsed {
+    left: calc(100% - 30px);
+    right: calc(30px - 100%);
+    visibility: hidden;
+    -webkit-transition: right 0.5s, left 0.5s, visibility 0s 0.5s;
+    -moz-transition: right 0.5s, left 0.5s, visibility 0s 0.5s;
+    transition: right 0.5s, left 0.5s, visibility 0s 0.5s;
+}
+
+[data-region="overlay"] {
+    display: none;
+    z-index: 100;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    overflow: auto;
+    bottom: 0;
+    background-color: #ddd;
+    opacity: 0.4;
+    padding-top: 4em;
+    text-align: center;
+}
+
+form#gradeform {
+    margin-left: 2%;
+}
+@media (max-width: 767px) {
+    .pagelayout-embedded #page{
+        margin-top: 0;
+    }
+    #page {
+        background-color: #F2F2F2 !important; 
+        padding: 0 !important; 
+    }
+    .path-mod-googleactivity.pagelayout-embedded {
+        overflow: auto;
+    }
+
+    .path-mod-googleactivity .page-context-header .page-header-headings {
+        margin-top: 13px;
+    }
+
+    .grading-panel {
+        background-color: #F2F2F2;
+        display: inline-block;
+        margin-right: auto;
+        width: 100%;
+        height: auto;
+        position: inherit;      
+    }
+
+    .grading-panel.col-lg-9.col-sm-12 {
+        height: 50%;
+    }
+
+    .path-mod-googleactivity [data-region="grading-navigation"],
+    .path-mod-googleactivity [data-region="grade"]{
+        position: inherit;
+        width: 100%;
+        top: 0;
+        left: 0;
+        right: auto;
+        overflow: hidden;
+        height: auto;
+        /* margin-bottom: 1em;*/
+    }
+
+    .path-mod-googleactivity [data-region="grade"].collapsed {
+        visibility: visible;
+    }
+
+    .path-mod-googleactivity [data-region="grading-navigation"] {
+        padding: 0;
+        text-align: center;
+    }
+
+    .path-mod-googleactivity [data-region="grade"] {
+        margin-bottom: 2em;
+    }
+
+    .path-mod-googleactivity [data-region="grading-navigation"] [data-region="user-info"] {
+        text-align: left;
+        width: auto;
+        display: inline-block;
+        margin: 0 auto;
+        height: 65px;
+    }
+
+    .path-mod-googleactivity [data-region="user-selector"] .alignment {
+        float: none;
+        margin: 0 auto 10px;
+        width: 256px;
+    }
+
+    iframe#ifile {
+        height: 500px; /*500px*/
+    }
+    .grade-div {
+        text-align: center;
+        float: none;
+        width: auto;
+    }
+
+    div#grading-panel-container {   
+        height: auto;
+    }
+    body#page-mod-googleactivity-view_grading_app {
+        overflow: auto !important;
+    }
+
+
+}

@@ -18,7 +18,7 @@
 /**
  * OAuth callback page that stores the user's authorisation.
  *
- * @package    mod_googledocs
+ * @package    mod_googleactivity
  * @copyright  2019 Michael de Raadt <michaelderaadt@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -26,6 +26,7 @@
 // Include required files.
 require('../../config.php');
 require(__DIR__ . '/locallib.php');
+require(__DIR__ . '/googledrive.php');
 
 // Gather parameters
 $cmid = required_param('cmid', PARAM_INT);
@@ -38,7 +39,7 @@ require_login();
 header('Cache-Control: no-cache, must-revalidate');
 header('Expires: Sat, 26 Jul 1997 05:00:00 GMT');
 $PAGE->set_url(
-    '/mod/googledocs/oauth2_callback.php',
+    '/mod/googleactivity/oauth2_callback.php',
     array(
         'cmid'       => $cmid,
         'sesskey'    => sesskey(),
@@ -46,11 +47,11 @@ $PAGE->set_url(
     )
 );
 $PAGE->set_context(null);
-$strauthenticated = get_string('authenticated', 'googledocs');
-$PAGE->set_title($strauthenticated);
+$strauthorised = get_string('authorised', 'googleactivity');
+$PAGE->set_title($strauthorised);
 $PAGE->set_pagelayout('popup');
 echo $OUTPUT->header();
-echo $OUTPUT->heading($strauthenticated, 2);
+echo $OUTPUT->heading($strauthorised, 2);
 
 /// Wait as long as it takes for this script to finish
 core_php_time_limit::raise();
@@ -60,12 +61,12 @@ $googledrive = new googledrive($cmid);
 $googledrive->callback();
 
 // Output the page content
-echo html_writer::tag('div', get_string('windowillclose', 'googledocs'), ['style' => 'margin: 20px 0;']);
+echo html_writer::tag('div', get_string('windowillclose', 'googleactivity'), ['style' => 'margin: 20px 0;']);
 echo html_writer::start_tag('div', ['class' => 'btn-group']);
 echo html_writer::tag('input', '', [
     'type'    => 'button',
     'class'   => 'btn btn-primary',
-    'value'   => get_string('close', 'googledocs'),
+    'value'   => get_string('close', 'googleactivity'),
     'onclick' => 'window.close();'
 ]);
 echo html_writer::end_tag('div');

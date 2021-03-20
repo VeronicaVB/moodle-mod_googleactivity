@@ -1,17 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="mod/googledocs/db" VERSION="20190426" COMMENT="XMLDB file for Moodle mod/googledocs"
+<XMLDB PATH="mod/googleactivity/db" VERSION="20210315" COMMENT="XMLDB file for Moodle mod/googleactivity"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="googledocs" COMMENT="googledocs table holds information about shared G Suite file and permissions">
+    <TABLE NAME="googleactivity" COMMENT="googleactivity table holds information about shared G Suite file and permissions">
       <FIELDS>
-        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true"/>
-        <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false"/>
-        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false"/>
-        <FIELD NAME="docid" TYPE="char" LENGTH="256" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" COMMENT="ID of the Google document." />
-        <FIELD NAME="timeshared" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="false"/>
-        <FIELD NAME="sharing" TYPE="int" LENGTH="4" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="use_document" TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT="create_new" SEQUENCE="false"/>
+        <FIELD NAME="intro" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="google_doc_url" TYPE="char" LENGTH="256" NOTNULL="false" DEFAULT="null" SEQUENCE="false" COMMENT="When the google activity resource is created from an existing file, record the value.  otherwise null."/>
+        <FIELD NAME="document_type" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="sharing" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="distribution" TYPE="char" LENGTH="100" NOTNULL="true" DEFAULT="each_gets_own" SEQUENCE="false"/>
+        <FIELD NAME="permissions" TYPE="char" LENGTH="100" NOTNULL="true" DEFAULT="writer" SEQUENCE="false"/>
+        <FIELD NAME="docid" TYPE="char" LENGTH="256" NOTNULL="true" SEQUENCE="false" COMMENT="ID of the Google document. When the resource is created from an existing file, record the ID.  0 otherwise"/>
+        <FIELD NAME="parentfolderid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Folder ID where the file is saved"/>
+        <FIELD NAME="update_status" TYPE="char" LENGTH="100" NOTNULL="true" DEFAULT="not_modified" SEQUENCE="false" COMMENT="Valid values:  modified, not_modified, updated, error.  To keep track of changes in the file.  Timemodified and timeshared are not reliable to validate. This status depends on the result from google drive."/>
+        <FIELD NAME="group_grouping_json" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timeshared" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
@@ -20,6 +33,87 @@
         <INDEX NAME="course" UNIQUE="false" FIELDS="course"/>
         <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
       </INDEXES>
+    </TABLE>
+    <TABLE NAME="google_activity_files" COMMENT="Holds reference to shared files to users">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Student ID"/>
+        <FIELD NAME="googleactivityid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Reference to the google activity instance id"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="File name"/>
+        <FIELD NAME="url" TYPE="char" LENGTH="250" NOTNULL="true" SEQUENCE="false" COMMENT="URL to the file shared"/>
+        <FIELD NAME="submit_status" TYPE="char" LENGTH="50" NOTNULL="true" DEFAULT="Not Submitted" SEQUENCE="false" COMMENT="Submission status"/>
+        <FIELD NAME="permission" TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT="edit" SEQUENCE="false" COMMENT="Distribution type, either: edit, comment or view"/>
+        <FIELD NAME="groupid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Group ID"/>
+        <FIELD NAME="groupingid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Grouping group ID"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="google_activity_folders" COMMENT="Keep a reference to the Google Drive folder ids created for a group">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="group_id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Group ID"/>
+        <FIELD NAME="googleactivityid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Reference to the google activity instance id"/>
+        <FIELD NAME="folder_id" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="ID generated by google drive API."/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="google_activity_work_task" COMMENT="Keep track of the students files being processed">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="docid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="File ID given by Google Drive"/>
+        <FIELD NAME="googleactivityid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Instance ID (from mdl_googleactivity)"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Student ID (from mdl_user)"/>
+        <FIELD NAME="creation_status" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="0 = Not created 1 = Created"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="google_activity_grades" COMMENT="Defines google_activity_grades">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="googleactivityid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="grade" TYPE="number" LENGTH="5" NOTNULL="true" SEQUENCE="false" DECIMALS="2"/>
+        <FIELD NAME="grader" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="The time the google activity submission was first modified by a grader"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="google_activity_submissions" COMMENT="This table keeps the information about student's interactions with the mod/googleactivity">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="googleactivityid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="groupid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="The group id for team submissions"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="NOTSUBMITTED" SEQUENCE="false" COMMENT="The status of this document submission. The current statuses are NOTSUBMITTED and SUBMITTED"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="The time of the  student submission to this document"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="The last time this assignment submission was modified by a student"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="googleactivfeedback_comments" COMMENT="Save submission comments">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="googleactivityid" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" SEQUENCE="false" COMMENT="Google activity instance ID."/>
+        <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="commenttext" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
+        <FIELD NAME="commentformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="The feedback text format"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="googleactivityid" TYPE="foreign" FIELDS="googleactivityid" REFTABLE="googleactivity" REFFIELDS="id"/>
+        <KEY NAME="grade" TYPE="foreign" FIELDS="grade" REFTABLE="google_activity_grades" REFFIELDS="id" COMMENT="The grade instance this feedback relates to"/>
+      </KEYS>
     </TABLE>
   </TABLES>
 </XMLDB>
