@@ -75,7 +75,7 @@ function googleactivity_add_instance(stdClass $googleactivity, mod_googleactivit
     global $DB, $USER;
 
     try {
-        //print_object($googleactivity);exit;
+       // print_object($googleactivity);exit;
 
         $googleactivity->timecreated = time();
 
@@ -93,21 +93,25 @@ function googleactivity_add_instance(stdClass $googleactivity, mod_googleactivit
         $group_grouping = [];
         $intro = (($mform->get_submitted_data())->introeditor);
         $dist = '';
-
+        
+        
         // Check if the distribution involves groups and/ or groupings.
         if (!empty(($mform->get_submitted_data())->groups) && !everyone(($mform->get_submitted_data())->groups)) {
             list($group_grouping, $dist) = prepare_json(($mform->get_submitted_data())->groups, $googleactivity->course);
         }
 
+        list($dist, $owncopy) = distribution_type($mform->get_submitted_data(), $dist);
+        
+        
         if (!empty($group_grouping)) {
             list($googleactivity->group_grouping_json, $students) = get_students_based_on_group_grouping_distribution($dist, $group_grouping);
+            
         }
-
+       // var_dump($students); exit;
         if ($students == null) {
             throw new exception('No Students provided. The files were not created');
         }
 
-        list($dist, $owncopy) = distribution_type($mform->get_submitted_data(), $dist);
 
         if ($googleactivity->use_document == 'existing') {
 

@@ -26,7 +26,8 @@ require_once($CFG->dirroot . '/user/lib.php');
 require_once($CFG->dirroot . '/mod/googleactivity/googledrive.php');
 require_once($CFG->dirroot . '/mod/googleactivity/locallib.php');
 
-class googleactivity_rendering {
+class googleactivity_rendering
+{
     /*
      * @var int $courseid The course id
      */
@@ -73,7 +74,8 @@ class googleactivity_rendering {
      */
     protected $canbegraded;
 
-    public function __construct($courseid, $selectall, $context, $cm, $googleactivity, $created = true) {
+    public function __construct($courseid, $selectall, $context, $cm, $googleactivity, $created = true)
+    {
         $this->selectall = $selectall;
         $this->context = $context;
         $this->courseid = $courseid;
@@ -93,7 +95,8 @@ class googleactivity_rendering {
      * @global type $CFG
      * @global type $PAGE
      */
-    public function render_table() {
+    public function render_table()
+    {
         global $USER, $DB;
 
         $types = google_filetypes();
@@ -104,10 +107,12 @@ class googleactivity_rendering {
             $isstudent = ($role->shortname == 'student');
         }
 
-        if (has_capability('mod/googleactivity:view', $this->context)
+        if (
+            has_capability('mod/googleactivity:view', $this->context)
             && is_enrolled($this->context, $USER->id, '', true)
             && !is_siteadmin()
-            && !has_capability('mod/googleactivity:viewall', $this->context)) {
+            && !has_capability('mod/googleactivity:viewall', $this->context)
+        ) {
             $isstudent = true;
         }
 
@@ -115,13 +120,14 @@ class googleactivity_rendering {
     }
 
     // Helper function.
-    private function render($types, $isstudent) {
+    private function render($types, $isstudent)
+    {
         global $USER;
         $students = $this->query_db();
         $usergroups = groups_get_user_groups($this->courseid, $USER->id);
         switch ($this->googleactivity->distribution) {
 
-            case 'std_copy' :
+            case 'std_copy':
 
                 if ($this->created && $isstudent) {
                     $this->render_files_for_student($types);
@@ -133,7 +139,7 @@ class googleactivity_rendering {
 
                 break;
 
-            case 'std_copy_group' :
+            case 'std_copy_group':
 
                 if ($this->created && $isstudent) {
                     $this->render_files_for_student($types);
@@ -145,7 +151,7 @@ class googleactivity_rendering {
 
                 break;
 
-            case 'std_copy_grouping' :
+            case 'std_copy_grouping':
                 if ($this->created && $isstudent) {
                     $this->render_files_for_student($types);
                 } else if (!$this->created) {
@@ -156,7 +162,7 @@ class googleactivity_rendering {
 
                 break;
 
-            case 'dist_share_same' :
+            case 'dist_share_same':
                 if ($this->created && $isstudent) {
                     $this->render_files_for_student($types);
                 } else if (!$this->created) {
@@ -167,7 +173,7 @@ class googleactivity_rendering {
 
                 break;
 
-            case 'dist_share_same_group' :
+            case 'dist_share_same_group':
                 if ($this->created && $isstudent) {
                     $this->render_files_for_students_in_groups($types, $usergroups);
                 } else {
@@ -201,7 +207,7 @@ class googleactivity_rendering {
                 }
                 break;
 
-            case 'group_grouping_copy' :
+            case 'group_grouping_copy':
                 if ($this->created && $isstudent) {
                     $this->render_files_for_students_in_group_grouping($types, $usergroups);
                 } else {
@@ -209,7 +215,7 @@ class googleactivity_rendering {
                 }
                 break;
 
-            case 'std_copy_group_grouping' :
+            case 'std_copy_group_grouping':
                 if ($this->created && $isstudent) {
                     $this->render_files_for_student_by_group_grouping($types, $usergroups);
                 } else if (!$this->created) {
@@ -219,7 +225,7 @@ class googleactivity_rendering {
                 }
                 break;
 
-            case 'dist_share_same_group_grouping' :
+            case 'dist_share_same_group_grouping':
                 if ($this->created && $isstudent) {
                     $this->render_files_for_students_in_groups($types, $usergroups);
                 } else if (!$this->created) {
@@ -231,12 +237,14 @@ class googleactivity_rendering {
         }
     }
 
-    public function render_work_in_progress() {
+    public function render_work_in_progress()
+    {
         global $OUTPUT;
         echo $OUTPUT->render_from_template('mod_googleactivity/work_in_progress', '');
     }
 
-    private function render_files_for_student($types) {
+    private function render_files_for_student($types)
+    {
         global $DB, $USER, $CFG, $OUTPUT;
 
         $sql = "SELECT * FROM mdl_google_activity_files WHERE userid = :userid AND googleactivityid = :instanceid";
@@ -250,7 +258,8 @@ class googleactivity_rendering {
     /**
      * When dist. is by group, the record doesn't keep a 1 to 1 relationship with the user id
      */
-    private function render_files_for_student_by_group_grouping($types, $usergroups) {
+    private function render_files_for_student_by_group_grouping($types, $usergroups)
+    {
         global $DB, $USER, $CFG;
 
         $a = $usergroups[0]; // Has all the groups this user belongs to.
@@ -268,7 +277,8 @@ class googleactivity_rendering {
         $this->get_students_file_view_content($result, $types);
     }
 
-    private function render_files_for_students_in_groups($types, $usergroups = null) {
+    private function render_files_for_students_in_groups($types, $usergroups = null)
+    {
         global $DB;
         $a = $usergroups[0]; // Has all the groups this user belongs to.
         if (empty($a)) {
@@ -280,12 +290,12 @@ class googleactivity_rendering {
                     WHERE groupid  $insql  AND googleactivityid = {$this->instanceid}";
 
             $result = $DB->get_records_sql($sql, $inparams);
-            
         }
         $this->get_students_file_view_content($result, $types);
     }
 
-    private function render_files_for_students_in_group_grouping($types, $usergroups = null) {
+    private function render_files_for_students_in_group_grouping($types, $usergroups = null)
+    {
         global $DB;
 
         $groupids = $usergroups[0]; // Has all the groups this user belongs to.
@@ -294,7 +304,7 @@ class googleactivity_rendering {
         // Gather grouping and groups ids in one array.
         foreach ($usergroups as $i => $g) {
             if ($i != 0) {
-                $groupingids [] = $i;
+                $groupingids[] = $i;
             }
         }
 
@@ -317,13 +327,15 @@ class googleactivity_rendering {
         $this->get_students_file_view_content($result, $types);
     }
 
-    private function get_students_file_view_content($sqlresult, $types) {
+    private function get_students_file_view_content($sqlresult, $types)
+    {
         global $DB, $USER, $OUTPUT, $CFG;
 
         // Get the Google Drive object.
         $client = new \googledrive($this->context->id, false, false, true, true);
         $emailaddress = $DB->get_record('user', array('id' => $USER->id), 'email');
-        $data = ['isloggedintogoogle' => $client->check_google_login(),
+        $data = [
+            'isloggedintogoogle' => $client->check_google_login(),
             'email' => $emailaddress->email,
             'viewpermission' => $this->googleactivity->permissions,
             'filename' => $this->googleactivity->name,
@@ -348,14 +360,17 @@ class googleactivity_rendering {
 
                 $submitstatus = $DB->get_record_sql($sql, $params);
                 $submitted = $submitstatus;
-                $graded = $DB->get_record('google_activity_grades', array('userid' => $USER->id,
-                    'googleactivityid' => $this->googleactivity->id));
+                $graded = $DB->get_record('google_activity_grades', array(
+                    'userid' => $USER->id,
+                    'googleactivityid' => $this->googleactivity->id
+                ));
             }
 
             $extra = "onclick=\"this.target='_blank';\"";
             $icon = $types[get_file_type_from_string($r->url)]['icon'];
             $imgurl = new moodle_url($CFG->wwwroot . '/mod/googleactivity/pix/' . $icon);
-            $data ['files'][] = ['extra' => $extra,
+            $data['files'][] = [
+                'extra' => $extra,
                 'icon' => $icon,
                 'url' => $r->url,
                 'groupid' => $r->groupid,
@@ -380,7 +395,8 @@ class googleactivity_rendering {
      * @param array $students
      * @param string $dist
      */
-    private function render_student_table_processing($types, $students, $dist = '') {
+    private function render_student_table_processing($types, $students, $dist = '')
+    {
         global $OUTPUT, $CFG, $DB;
 
         $owneremail = $DB->get_record('user', array('id' => $this->googleactivity->userid), 'email');
@@ -396,7 +412,8 @@ class googleactivity_rendering {
             $groupids = ltrim($groupids, '-');
         }
 
-        $data = ['googleactivityid' => $this->googleactivity->docid,
+        $data = [
+            'googleactivityid' => $this->googleactivity->docid,
             'instanceid' => $this->googleactivity->id,
             'from_existing' => ($this->googleactivity->use_document == 'existing') ? true : false,
             'members' => array(),
@@ -410,14 +427,19 @@ class googleactivity_rendering {
 
         foreach ($students as $st) {
             foreach ($st as $student) {
-                $picture = $OUTPUT->user_picture($student, array('course' => $this->courseid,
-                    'includefullname' => true, 'class' => 'userpicture'));
+                $picture = $OUTPUT->user_picture($student, array(
+                    'course' => $this->courseid,
+                    'includefullname' => true, 'class' => 'userpicture'
+                ));
                 $icon = $types[$this->googleactivity->document_type]['icon'];
                 $imgurl = new moodle_url($CFG->wwwroot . '/mod/googleactivity/pix/' . $icon);
                 $image = html_writer::empty_tag('img', array('src' => $imgurl, 'class' => 'link_icon'));
-                $links = html_writer::link('#', $image, array('target' => '_blank',
-                        'id' => 'link_file_' . $i));
-                $urlparams = ['id' => $this->cm->id,
+                $links = html_writer::link('#', $image, array(
+                    'target' => '_blank',
+                    'id' => 'link_file_' . $i
+                ));
+                $urlparams = [
+                    'id' => $this->cm->id,
                     'action' => 'grader',
                     'userid' => $student->id
                 ];
@@ -445,7 +467,8 @@ class googleactivity_rendering {
     /**
      * Dist = dist_share_same_grouping
      */
-    private function render_grouping_student_table($types) {
+    private function render_grouping_student_table($types)
+    {
         global $DB, $OUTPUT, $CFG;
 
         $owneremail = $DB->get_record('user', array('id' => $this->googleactivity->userid), 'email');
@@ -464,7 +487,8 @@ class googleactivity_rendering {
 
         $groupingids = implode("-", $groupingids);
 
-        $data = ['googleactivityid' => $this->googleactivity->docid,
+        $data = [
+            'googleactivityid' => $this->googleactivity->docid,
             'instanceid' => $this->googleactivity->id,
             'from_existing' => ($this->googleactivity->use_document == 'existing') ? true : false,
             'members' => array(),
@@ -484,9 +508,11 @@ class googleactivity_rendering {
                 'labelclasses' => 'accesshide',
             ]);
 
-            $picture = $OUTPUT->user_picture($student, array('course' => $this->courseid,
-                'includefullname' => true, 'class' => 'userpicture'));
-            $icon = $types[get_file_type_from_string($this->googleactivity->document_type)]['icon'];
+            $picture = $OUTPUT->user_picture($student, array(
+                'course' => $this->courseid,
+                'includefullname' => true, 'class' => 'userpicture'
+            ));
+            $icon = $types[$this->googleactivity->document_type]['icon'];
             $imgurl = new moodle_url($CFG->wwwroot . '/mod/googleactivity/pix/' . $icon);
             $image = html_writer::empty_tag('img', array('src' => $imgurl, 'class' => 'link_icon'));
 
@@ -506,7 +532,8 @@ class googleactivity_rendering {
                 $status = html_writer::start_div('', ["id" => 'file_' . $i]) . html_writer::end_div();
             }
 
-            $data['students'][] = ['checkbox' => $OUTPUT->render($checkbox),
+            $data['students'][] = [
+                'checkbox' => $OUTPUT->render($checkbox),
                 'picture' => $picture,
                 'fullname' => fullname($student),
                 'student-id' => $student->id,
@@ -531,7 +558,8 @@ class googleactivity_rendering {
      * @param array $students
      * @param type $dist
      */
-    private function render_table_by_students_files_created($types, $students, $dist = '') {
+    private function render_table_by_students_files_created($types, $students, $dist = '')
+    {
         global $OUTPUT, $CFG, $DB;
         $owneremail = $DB->get_record('user', array('id' => $this->googleactivity->userid), 'email');
 
@@ -547,7 +575,8 @@ class googleactivity_rendering {
             $group_ids = ltrim($group_ids, '-');
         }
 
-        $data = ['googleactivityid' => $this->googleactivity->docid,
+        $data = [
+            'googleactivityid' => $this->googleactivity->docid,
             'docname' => $this->googleactivity->name,
             'instanceid' => $this->googleactivity->id,
             'from_existing' => ($this->googleactivity->use_document == 'existing') ? true : false,
@@ -563,9 +592,11 @@ class googleactivity_rendering {
         $i = 0;
 
         foreach ($students as $student) {
-            
-            $picture = $OUTPUT->user_picture($student, array('course' => $this->courseid,
-                'includefullname' => true, 'class' => 'userpicture'));
+
+            $picture = $OUTPUT->user_picture($student, array(
+                'course' => $this->courseid,
+                'includefullname' => true, 'class' => 'userpicture'
+            ));
             $icon = $types[$this->googleactivity->document_type]['icon'];
             $imgurl = new moodle_url($CFG->wwwroot . '/mod/googleactivity/pix/' . $icon);
             $image = html_writer::empty_tag('img', array('src' => $imgurl, 'class' => 'link_icon'));
@@ -574,45 +605,62 @@ class googleactivity_rendering {
             $readytograde = false;
             $graded = false;
             if ($this->googleactivity->permissions != 'view') { // If the file is only view then no grading.
-                $readytograde = $DB->get_record('google_activity_submissions', array('userid' => $student->id,
-                    'googleactivityid' => $this->googleactivity->id));
+                $readytograde = $DB->get_record('google_activity_submissions', array(
+                    'userid' => $student->id,
+                    'googleactivityid' => $this->googleactivity->id
+                ));
             }
 
-            $graded = $DB->get_record('google_activity_grades', array('userid' => $student->id,
-                'googleactivityid' => $this->googleactivity->id));
+            $graded = $DB->get_record('google_activity_grades', array(
+                'userid' => $student->id,
+                'googleactivityid' => $this->googleactivity->id
+            ));
 
             // If a student belongs to more than one group, it can get more than one file. Render all.
-            if ($dist == 'std_copy_group' || $dist == 'std_copy_grouping'
-                || $dist == 'std_copy_group_grouping') {
+            if (
+                $dist == 'std_copy_group' || $dist == 'std_copy_grouping'
+                || $dist == 'std_copy_group_grouping'
+            ) {
 
-                $urls = $DB->get_records('google_activity_files', array('userid' => $student->id,
-                    'googleactivityid' => $this->googleactivity->id), '');
+                $urls = $DB->get_records('google_activity_files', array(
+                    'userid' => $student->id,
+                    'googleactivityid' => $this->googleactivity->id
+                ), '');
 
                 foreach ($urls as $url) {
-                    $links .= html_writer::link($url->url, $image,
-                        array('target' => '_blank','id' => 'link_file_' . $i));
+                    $links .= html_writer::link(
+                        $url->url,
+                        $image,
+                        array('target' => '_blank', 'id' => 'link_file_' . $i)
+                    );
                 }
             }
 
             if ($dist == 'dist_share_same' || $dist == 'std_copy') {
-                $links .= html_writer::link($student->url, $image, array('target' => '_blank',
-                        'id' => 'link_file_' . $i));
+                $links .= html_writer::link($student->url, $image, array(
+                    'target' => '_blank',
+                    'id' => 'link_file_' . $i
+                ));
             }
 
             if ($links == '') {
-                $links .= html_writer::link($student->url, $image, array('target' => '_blank',
-                        'id' => 'link_file_' . $i));
+                $links .= html_writer::link($student->url, $image, array(
+                    'target' => '_blank',
+                    'id' => 'link_file_' . $i
+                ));
             }
 
-            $urlparams = ['id' => $this->cm->id,
+            $urlparams = [
+                'id' => $this->cm->id,
                 'action' => 'grader',
                 'userid' => $student->id
             ];
             $gradeurl = new moodle_url('/mod/googleactivity/view_grading_app.php?', $urlparams);
 
             list($statustext, $accesstext, $class) = $this->get_status_style($readytograde, $this->googleactivity->permissions, $graded);
-           
-            $data['students'][] = ['picture' => $picture,
+
+            $data['students'][] = [
+                'picture' => $picture,
                 'fullname' => fullname($student),
                 'student-id' => $student->id,
                 'student-email' => $student->email,
@@ -621,8 +669,8 @@ class googleactivity_rendering {
                 'status' => html_writer::start_div($class, ['id' => 'file_' . $i]) . $statustext . html_writer::end_div(),
                 'readytograde' => $readytograde,
                 'access' => html_writer::start_div($class, ['id' => 'file_' . $i]) .
-                $accesstext .
-                html_writer::end_div(), ucfirst($this->googleactivity->permissions),
+                    $accesstext .
+                    html_writer::end_div(), ucfirst($this->googleactivity->permissions),
                 'gradeurl' => $gradeurl,
                 'beengraded' => $graded,
                 'gradevalue' => ($graded) ? $graded->grade : '',
@@ -640,8 +688,9 @@ class googleactivity_rendering {
      * @global type $CFG
      * @param type $types
      */
-    private function render_table_by_group($types) {
-      
+    private function render_table_by_group($types)
+    {
+
         global $OUTPUT, $CFG, $DB;
         $groupsandmembers = $this->get_groups_and_members();
 
@@ -678,20 +727,24 @@ class googleactivity_rendering {
 
         $urlshared = '#';
 
-      //  $i = 0;
+        //  $i = 0;
         $status = '';
         foreach ($groupsandmembers as $groupmember => $members) {
 
             $conditions = ['googleactivityid' => $this->instanceid, 'groupid' => $members['groupid']];
             $urlshared = $DB->get_field('google_activity_files', 'url', $conditions, IGNORE_MISSING);
-           
-            $status = !empty($urlshared ) ?  'Created' : '';
-            $data['groups'][] = ['groupid' => $members['groupid'],
+
+            $status = !empty($urlshared) ?  'Created' : '';
+            $data['groups'][] = [
+                'groupid' => $members['groupid'],
                 'groupname' => $groupmember,
                 'user_pictures' => $members['user_pictures'],
-                'fileicon' => html_writer::link($urlshared, $iconimage,
-                    array('target' => '_blank', 'id' => 'shared_link_url_' . $members['groupid'])),
-                'sharing_status' => html_writer::start_div('', ["id" => 'status_col']).$status . html_writer::end_div(),
+                'fileicon' => html_writer::link(
+                    $urlshared,
+                    $iconimage,
+                    array('target' => '_blank', 'id' => 'shared_link_url_' . $members['groupid'])
+                ),
+                'sharing_status' => html_writer::start_div('', ["id" => 'status_col']) . $status . html_writer::end_div(),
                 'student_access' => ucfirst($this->googleactivity->permissions)
             ];
         }
@@ -705,7 +758,8 @@ class googleactivity_rendering {
      * @global type $OUTPUT
      * @param type $types
      */
-    private function render_table_by_grouping($types) {
+    private function render_table_by_grouping($types)
+    {
         global $DB, $OUTPUT;
 
         $j = json_decode($this->googleactivity->group_grouping_json);
@@ -715,21 +769,25 @@ class googleactivity_rendering {
         $data['instanceid'] = $this->instanceid;
         $data['from_existing'] = ($this->googleactivity->use_document == 'existing') ? true : false;
         $data['owneremail'] = $owneremail->email;
-        $data ['studentaccess'] = ucfirst($this->googleactivity->permissions);
+        $data['studentaccess'] = ucfirst($this->googleactivity->permissions);
         $data['intro'] = format_module_intro('googleactivity', $this->googleactivity, $this->cm->id, false);
-
+        $created = ($this->googleactivity->sharing == 1) ? 'Created' : '';
+        
         foreach ($j->c as $c => $condition) {
             if ($condition->type == 'grouping') {
                 $groupingprops = groups_get_grouping($condition->id, 'id, name');
                 $groupingdetails = $this->grouping_details_helper_function($types, $groupingprops);
 
                 foreach ($groupingdetails as $gg) {
-                    $data['groupings']['groupingdetails'][] = ['groupingid' => $gg['groupingid'],
+                    $data['groupings']['groupingdetails'][] = [
+                        'groupingid' => $gg['groupingid'],
                         'groupingdname' => $gg['groupingdname'],
                         'memberspictures' => $gg['memberspictures'],
                         'fileicon' => $gg['fileicon'],
-                        'sharingstatus' => html_writer::start_div('',
-                            ["id" => 'status_col_' . $gg['groupingid']]) . html_writer::end_div()
+                        'sharingstatus' => html_writer::start_div(
+                            '',
+                            ["id" => 'status_col_' . $gg['groupingid']]
+                        ) .$created .html_writer::end_div()
                     ];
                 }
             }
@@ -738,7 +796,8 @@ class googleactivity_rendering {
         echo $OUTPUT->render_from_template('mod_googleactivity/grouping_table', $data);
     }
 
-    private function render_table_by_group_grouping($types) {
+    private function render_table_by_group_grouping($types)
+    {
         global $OUTPUT, $DB, $CFG;
 
         // Get teacher email. Is the owner of the copies that are going to be created for each group.
@@ -753,7 +812,7 @@ class googleactivity_rendering {
         $groupsandmembers = $this->get_groups_and_members();
         $j = json_decode($this->googleactivity->group_grouping_json);
 
-        $icon = $types[get_file_type_from_string($this->googleactivity->document_type)]['icon'];
+        $icon = $types[$this->googleactivity->document_type]['icon'];
         $imgurl = new moodle_url($CFG->wwwroot . '/mod/googleactivity/pix/' . $icon);
         $iconimage = html_writer::empty_tag('img', array('src' => $imgurl, 'class' => 'link_icon'));
 
@@ -765,14 +824,20 @@ class googleactivity_rendering {
                 $conditions = ['googleactivityid' => $this->googleactivity->id, 'groupid' => $members['groupid']];
                 $urlshared = $DB->get_field('google_activity_files', 'url', $conditions, IGNORE_MISSING);
             }
-            $data['group_grouping']['ggdetails'][] = ['gid' => $members['groupid'],
+            $data['group_grouping']['ggdetails'][] = [
+                'gid' => $members['groupid'],
                 'gname' => $groupmember,
                 'gtype' => 'group',
                 'memberspictures' => $members['user_pictures'],
-                'fileicon' => html_writer::link($urlshared, $iconimage,
-                    array('target' => '_blank', 'id' => 'shared_link_url_' . $members['groupid'])),
-                'sharingstatus' => html_writer::start_div('',
-                    ["id" => 'status_col_' . $members['groupid']]) . html_writer::end_div(),
+                'fileicon' => html_writer::link(
+                    $urlshared,
+                    $iconimage,
+                    array('target' => '_blank', 'id' => 'shared_link_url_' . $members['groupid'])
+                ),
+                'sharingstatus' => html_writer::start_div(
+                    '',
+                    ["id" => 'status_col_' . $members['groupid']]
+                ) . html_writer::end_div(),
             ];
         }
 
@@ -783,13 +848,16 @@ class googleactivity_rendering {
                 $groupingdetails = $this->grouping_details_helper_function($types, $groupingprops);
 
                 foreach ($groupingdetails as $gg) {
-                    $data['group_grouping']['ggdetails'][] = ['gid' => $gg['groupingid'],
+                    $data['group_grouping']['ggdetails'][] = [
+                        'gid' => $gg['groupingid'],
                         'gname' => $gg['groupingdname'],
                         'gtype' => $condition->type,
                         'memberspictures' => $gg['memberspictures'],
                         'fileicon' => $gg['fileicon'],
-                        'sharingstatus' => html_writer::start_div('',
-                            ["id" => 'status_col_' . $gg['groupingid']]) . html_writer::end_div(),
+                        'sharingstatus' => html_writer::start_div(
+                            '',
+                            ["id" => 'status_col_' . $gg['groupingid']]
+                        ) . html_writer::end_div(),
                         'status'
                     ];
                 }
@@ -799,10 +867,11 @@ class googleactivity_rendering {
         echo $OUTPUT->render_from_template('mod_googleactivity/group_grouping_table', $data);
     }
 
-    private function grouping_details_helper_function($types, $gropingproperties) {
+    private function grouping_details_helper_function($types, $gropingproperties)
+    {
         global $CFG, $DB, $OUTPUT;
 
-        $icon = $types[get_file_type_from_string($this->googleactivity->document_type)]['icon'];
+        $icon = $types[$this->googleactivity->document_type]['icon'];
         $imgurl = new moodle_url($CFG->wwwroot . '/mod/googleactivity/pix/' . $icon);
         $iconimage = html_writer::empty_tag('img', array('src' => $imgurl, 'class' => 'link_icon'));
 
@@ -810,23 +879,32 @@ class googleactivity_rendering {
         $memberspictures = '';
         $data = [];
         $urlshared = '';
-
+        $created = '';
         foreach ($members as $member) {
-            $memberspictures .= $OUTPUT->user_picture($member, array('course' => $this->courseid,
-                'includefullname' => false, 'class' => 'userpicture'));
+            $memberspictures .= $OUTPUT->user_picture($member, array(
+                'course' => $this->courseid,
+                'includefullname' => false, 'class' => 'userpicture'
+            ));
         }
 
         if ($this->created) {
             $conditions = ['googleactivityid' => $this->googleactivity->id, 'groupingid' => $gropingproperties->id];
             $urlshared = $DB->get_field('google_activity_files', 'url', $conditions, IGNORE_MISSING);
+            $created = 'Created';
         }
 
-        $data[$gropingproperties->name] = ['groupingid' => $gropingproperties->id,
+        $data[$gropingproperties->name] = [
+            'groupingid' => $gropingproperties->id,
             'groupingdname' => $gropingproperties->name,
-            'fileicon' => html_writer::link($urlshared, $iconimage,
-                array('target' => '_blank', 'id' => 'shared_link_url_' . $gropingproperties->id)), $iconimage,
-            'sharingstatus' => html_writer::start_div('',
-                ["id" => 'file_grouping']) . html_writer::end_div(),
+            'fileicon' => html_writer::link(
+                $urlshared,
+                $iconimage,
+                array('target' => '_blank', 'id' => 'shared_link_url_' . $gropingproperties->id)
+            ), $iconimage,
+            'sharingstatus' => html_writer::start_div(
+                '',
+                ["id" => 'file_grouping']
+            ) . html_writer::end_div(),
             'memberspictures' => $memberspictures,
         ];
 
@@ -840,17 +918,20 @@ class googleactivity_rendering {
      * @global type $USER
      * @return array
      */
-    public function query_db() {
+    public function query_db()
+    {
 
         global $DB, $USER;
-      
-        $userfields =  user_picture::fields('u');       
+
+        $userfields =  user_picture::fields('u');
         $studentrecords = '';
 
-        if (has_capability('mod/googleactivity:view', $this->context)
+        if (
+            has_capability('mod/googleactivity:view', $this->context)
             && is_enrolled($this->context, $USER->id, '', true) && !is_siteadmin()
             && !has_capability('mod/googleactivity:viewall', $this->context)
-            && $this->googleactivity->distribution == 'std_copy') {
+            && $this->googleactivity->distribution == 'std_copy'
+        ) {
 
             list($rawdata, $params) = $this->query_student_file_view($userfields);
         } else {
@@ -858,14 +939,13 @@ class googleactivity_rendering {
             if ($this->created) {
                 list($rawdata, $params) = $this->queries_get_students_list_created($userfields);
                 $studentrecords = $DB->get_records_sql($rawdata, $params);
-
             } else {
 
                 $studentrecords = $this->queries_get_students_list_processing();
                 return array($studentrecords);
             }
         }
-        
+
         return $studentrecords;
     }
 
@@ -875,7 +955,8 @@ class googleactivity_rendering {
      * @param type $courseid
      * @return type
      */
-    private function get_course_group_number($courseid) {
+    private function get_course_group_number($courseid)
+    {
 
         global $DB;
         $sql = " SELECT count(*)
@@ -891,7 +972,8 @@ class googleactivity_rendering {
      * @global type $DB
      * @return type
      */
-    private function get_groups_and_members() {
+    private function get_groups_and_members()
+    {
         global $DB, $OUTPUT;
 
         $groups = get_groups_details_from_json(json_decode($this->googleactivity->group_grouping_json));
@@ -922,11 +1004,14 @@ class googleactivity_rendering {
             }
 
             foreach ($members as $member) {
-                $user_pictures .= $OUTPUT->user_picture($member,
-                    array('course' => $this->courseid, 'includefullname' => false, 'class' => 'userpicture'));
+                $user_pictures .= $OUTPUT->user_picture(
+                    $member,
+                    array('course' => $this->courseid, 'includefullname' => false, 'class' => 'userpicture')
+                );
             }
 
-            $groupmembers[$gr->name] = ['groupid' => $gr->id,
+            $groupmembers[$gr->name] = [
+                'groupid' => $gr->id,
                 'user_pictures' => $user_pictures,
                 'groupmembers' => $members
             ];
@@ -937,16 +1022,20 @@ class googleactivity_rendering {
         return $groupmembers;
     }
 
-    private function set_data_for_grouping_table($groupingmembers) {
+    private function set_data_for_grouping_table($groupingmembers)
+    {
         global $OUTPUT;
         $i = 0;
         $data = [];
 
         foreach ($groupingmembers as $member) {
 
-            $data [] = ['picture' => $OUTPUT->user_picture($member, array('course' => $this->courseid,
+            $data[] = [
+                'picture' => $OUTPUT->user_picture($member, array(
+                    'course' => $this->courseid,
                     'includefullname' => true,
-                    'class' => 'userpicture ')),
+                    'class' => 'userpicture '
+                )),
                 'fullname' => fullname($member),
                 'status' => html_writer::start_div('', ["id" => 'file_' . $i]) . html_writer::end_div(),
                 'student-id' => $member->id,
@@ -965,7 +1054,8 @@ class googleactivity_rendering {
      * @param type $groupids
      * @return array
      */
-    private function get_grouping_groups_and_members($groupingid) {
+    private function get_grouping_groups_and_members($groupingid)
+    {
         global $DB, $OUTPUT;
         list($insql, $inparams) = $DB->get_in_or_equal($groupingid);
         $groupmembers = [];
@@ -982,8 +1072,10 @@ class googleactivity_rendering {
             $gmembers = groups_get_members($gg->groupid, 'u.*', $sort = 'firstname ASC');
 
             foreach ($gmembers as $gmember) {
-                $user_pictures .= $OUTPUT->user_picture($gmember, array('course' => $this->courseid,
-                    'includefullname' => false, 'class' => 'userpicture'));
+                $user_pictures .= $OUTPUT->user_picture($gmember, array(
+                    'course' => $this->courseid,
+                    'includefullname' => false, 'class' => 'userpicture'
+                ));
             }
 
             if ($this->created) {
@@ -991,11 +1083,13 @@ class googleactivity_rendering {
                 $url = $DB->get_field('google_activity_files', 'url', $conditions, IGNORE_MISSING);
             }
 
-            $groupmembers [] = ['groupid' => $gg->groupid,
+            $groupmembers[] = [
+                'groupid' => $gg->groupid,
                 'group_name' => $group->name,
                 'user_pictures' => $user_pictures,
                 'url' => $url,
-                'groupmembers' => $this->set_data_for_grouping_table($gmembers)];
+                'groupmembers' => $this->set_data_for_grouping_table($gmembers)
+            ];
             $user_pictures = '';
         }
 
@@ -1006,13 +1100,16 @@ class googleactivity_rendering {
      * This query fetches the student file info
      * to display when a student clicks on the name of the file in a course.
      */
-    private function query_student_file_view($userfields) {
+    private function query_student_file_view($userfields)
+    {
         global $USER, $DB;
         $usergroups = groups_get_user_groups($this->courseid, $USER->id);
 
-        if ($this->googleactivity->distribution == "group_copy" && !empty($usergroups)
+        if (
+            $this->googleactivity->distribution == "group_copy" && !empty($usergroups)
             || $this->googleactivity->distribution == "std_copy_group"
-            || $this->googleactivity->distribution == "std_copy_grouping") {
+            || $this->googleactivity->distribution == "std_copy_grouping"
+        ) {
 
             foreach ($usergroups as $ug => $groups) {
                 $a = $groups;
@@ -1042,16 +1139,17 @@ class googleactivity_rendering {
      * a set of files already created.
      */
 
-    private function queries_get_students_list_created($userfields) {
+    private function queries_get_students_list_created($userfields)
+    {
 
         switch ($this->googleactivity->distribution) {
             case 'group_copy':
                 list($rawdata, $params) = $this->query_get_students_list_created_by_group_grouping($userfields);
                 break;
-            case 'std_copy' :
+            case 'std_copy':
                 list($rawdata, $params) = $this->query_get_students_list_created($userfields);
                 break;
-            case 'std_copy_group' :
+            case 'std_copy_group':
                 list($rawdata, $params) = $this->query_get_students_list_created($userfields);
                 break;
             case 'dist_share_same_group':
@@ -1066,7 +1164,7 @@ class googleactivity_rendering {
             case 'dist_share_same_grouping':
                 list($rawdata, $params) = $this->query_get_student_list_created_by_dist_share_same_group_copy($userfields);
                 break;
-            case 'dist_share_same' :
+            case 'dist_share_same':
                 list($rawdata, $params) = $this->query_get_students_list_created($userfields);
                 break;
             case 'std_copy_group_grouping':
@@ -1084,7 +1182,8 @@ class googleactivity_rendering {
         return array($rawdata, $params);
     }
 
-    private function query_get_students_list_created_by_group_grouping($userfields, $grouping = false) {
+    private function query_get_students_list_created_by_group_grouping($userfields, $grouping = false)
+    {
 
         $countgroups = $this->get_course_group_number($this->courseid);
 
@@ -1100,8 +1199,8 @@ class googleactivity_rendering {
                             INNER JOIN mdl_googleactivity as gd on gf.googleactivityid = gd.id
                             INNER JOIN mdl_groups_members as gm on gm.userid = u.id
                             INNER JOIN mdl_groups as gr on gr.id = gm.groupid and gr.courseid = gd.course
-                            WHERE gd.course = ? AND gd.id = ?  AND (gf.name like '{$this->googleactivity->name }_%'
-                                                OR gf.name like '{$this->googleactivity->name }')";
+                            WHERE gd.course = ? AND gd.id = ?  AND (gf.name like '{$this->googleactivity->name}_%'
+                                                OR gf.name like '{$this->googleactivity->name}')";
                 $params = array($this->courseid, $this->googleactivity->id);
             } else {
 
@@ -1124,7 +1223,8 @@ class googleactivity_rendering {
      * @param type $userfields
      * @return type
      */
-    private function query_get_students_list_created($userfields) {
+    private function query_get_students_list_created($userfields)
+    {
         //print_object($userfields->selects); exit;
         $rawdata = "SELECT  DISTINCT gf.id, $userfields,  gf.name, gf.url as url, gf.groupid,
                     gf.permission, u.id
@@ -1136,7 +1236,8 @@ class googleactivity_rendering {
         return array($rawdata, $params);
     }
 
-    private function query_get_student_list_created_by_dist_share_same_group_copy($userfields) {
+    private function query_get_student_list_created_by_dist_share_same_group_copy($userfields)
+    {
 
         $rawdata = "SELECT DISTINCT $userfields, gm.groupid, gf.url as url FROM mdl_groups_members AS gm
                     INNER JOIN mdl_user AS u ON gm.userid = u.id
@@ -1155,7 +1256,8 @@ class googleactivity_rendering {
      * @param type $countgroups
      * @return type
      */
-    private function queries_get_students_list_processing() {
+    private function queries_get_students_list_processing()
+    {
 
         $j = json_decode($this->googleactivity->group_grouping_json);
         $countgroups = $this->get_course_group_number($this->courseid);
@@ -1163,21 +1265,35 @@ class googleactivity_rendering {
 
         if ($countgroups == 0 || empty($j->c)) { // TODO: std_copy  test course with and without gruops.
             return $this->coursestudents;
-        } else if ($this->googleactivity->distribution != 'dist_share_same_grouping'
+        } else if (
+            $this->googleactivity->distribution != 'dist_share_same_grouping'
             && $this->googleactivity->distribution != 'grouping_copy'
-            && $this->googleactivity->distribution != 'std_copy_grouping') {
-            $students = $this->get_students_by_group($this->coursestudents, $this->googleactivity->group_grouping_json,
-                $this->googleactivity->course);
+            && $this->googleactivity->distribution != 'std_copy_grouping'
+        ) {
+            $students = $this->get_students_by_group(
+                $this->coursestudents,
+                $this->googleactivity->group_grouping_json,
+                $this->googleactivity->course
+            );
         } else if ($this->googleactivity->distribution == 'dist_share_same_group_grouping') {
-            $studentsingroups = $this->get_students_by_group($this->coursestudents, $this->googleactivity->group_grouping_json,
-                $this->googleactivity->course);
-            $studentsingroupings = $this->get_students_by_grouping($this->coursestudents,
-                $this->googleactivity->group_grouping_json, $this->googleactivity->course);
+            $studentsingroups = $this->get_students_by_group(
+                $this->coursestudents,
+                $this->googleactivity->group_grouping_json,
+                $this->googleactivity->course
+            );
+            $studentsingroupings = $this->get_students_by_grouping(
+                $this->coursestudents,
+                $this->googleactivity->group_grouping_json,
+                $this->googleactivity->course
+            );
 
             $students = array_merge($studentsingroups, $studentsingroupings($id));
         } else {
-            $students = $this->get_students_by_grouping($this->coursestudents, $this->googleactivity->group_grouping_json,
-                $this->googleactivity->course);
+            $students = $this->get_students_by_grouping(
+                $this->coursestudents,
+                $this->googleactivity->group_grouping_json,
+                $this->googleactivity->course
+            );
         }
 
         return $students;
@@ -1191,7 +1307,8 @@ class googleactivity_rendering {
      * @return array stdClass
      */
 
-    private function get_students_by_group($coursestudents, $conditionjson, $courseid) {
+    private function get_students_by_group($coursestudents, $conditionjson, $courseid)
+    {
 
         $groupmembers = get_group_members_ids($conditionjson, $courseid);
 
@@ -1204,7 +1321,8 @@ class googleactivity_rendering {
         return $students;
     }
 
-    private function get_students_by_grouping($coursestudents, $conditionjson, $courseid) {
+    private function get_students_by_grouping($coursestudents, $conditionjson, $courseid)
+    {
 
         $groupmembers = get_grouping_members_ids($conditionjson, $courseid);
 
@@ -1225,7 +1343,8 @@ class googleactivity_rendering {
      * @global type $DB
      * @param type $studentid
      */
-    private function get_grouping_file_url($studentid) {
+    private function get_grouping_file_url($studentid)
+    {
         global $DB;
 
         $sql = "SELECT gf.url as url
@@ -1238,7 +1357,8 @@ class googleactivity_rendering {
         return $r;
     }
 
-    private function get_students_files_url($groupsandmembers) {
+    private function get_students_files_url($groupsandmembers)
+    {
         global $DB;
 
         foreach ($groupsandmembers as $groupmember => $members) {
@@ -1252,14 +1372,16 @@ class googleactivity_rendering {
         return $groupsandmembers;
     }
 
-    public function view_grading_summary() {
+    public function view_grading_summary()
+    {
         global $OUTPUT;
 
         $participants = count_students($this->googleactivity->id);
         $urlparams = array('id' => $this->cm->id, 'action' => 'grading', 'fromsummary' => 'fs');
         $url = new moodle_url('/mod/googleactivity/view.php?', $urlparams);
         $submitted = count_submitted_files($this->googleactivity->id);
-        $data = ['title' => $this->googleactivity->name,
+        $data = [
+            'title' => $this->googleactivity->name,
             'participants' => $participants,
             'submitted' => $submitted,
             'needsgrading' => $submitted,
@@ -1275,7 +1397,8 @@ class googleactivity_rendering {
      *
      * @return string
      */
-    public function view_grading_table() {
+    public function view_grading_table()
+    {
         global $OUTPUT, $DB;
 
         $userfields = user_picture::fields('u');
@@ -1288,7 +1411,8 @@ class googleactivity_rendering {
         $submitted = count_submitted_files($this->googleactivity->id);
 
         $url = new moodle_url('/mod/googleactivity/view.php?action=grading&id' . $this->cm->id . 'tifirst');
-        $data = ['docname' => $this->googleactivity->name,
+        $data = [
+            'docname' => $this->googleactivity->name,
             'cmid' => $this->cm->id,
             'title' => get_string('title', 'googleactivity'),
             'class' => 'firstinitial',
@@ -1320,14 +1444,18 @@ class googleactivity_rendering {
             $urlparams = array('id' => $this->cm->id, 'action' => 'grading', 'fromsummary' => 'fs', 'userid' => $user->id);
             $grade = new moodle_url('/mod/googleactivity/view_grading_app.php?', $urlparams);
 
-            $urlparams = ['id' => $this->cm->id,
+            $urlparams = [
+                'id' => $this->cm->id,
                 'action' => 'grader',
                 'userid' => $user->id
             ];
             $gradeurl = new moodle_url('/mod/googleactivity/view_grading_app.php?', $urlparams);
 
-            $data['users'][] = ['picture' => $OUTPUT->user_picture($user, array('course' => $this->courseid,
-                    'includefullname' => false, 'class' => 'userpicture')),
+            $data['users'][] = [
+                'picture' => $OUTPUT->user_picture($user, array(
+                    'course' => $this->courseid,
+                    'includefullname' => false, 'class' => 'userpicture'
+                )),
                 'fullname' => $link,
                 'email' => $user->email,
                 'userid' => $user->id,
@@ -1344,7 +1472,8 @@ class googleactivity_rendering {
         echo $OUTPUT->render_from_template('mod_googleactivity/grading_table', $data);
     }
 
-    public function view_grading_app($userid) {
+    public function view_grading_app($userid)
+    {
         global $OUTPUT, $DB, $CFG, $COURSE;
 
         $user = $DB->get_record('user', array('id' => $userid));
@@ -1384,7 +1513,8 @@ class googleactivity_rendering {
         }
 
 
-        $data = ['userid' => $userid,
+        $data = [
+            'userid' => $userid,
             'courseid' => $this->courseid,
             'showuseridentity' => true,
             'coursename' => $this->context->get_context_name(),
@@ -1408,17 +1538,19 @@ class googleactivity_rendering {
             'display' => true,
             'contextid' => $this->context->id,
             'isloggedintogoogle' => $client->check_google_login(),
-            'isfolder' => $isfolder ,
+            'isfolder' => $isfolder,
             'isempty' => $countfilesinfolder == 0,
         ];
- 
+
         echo $OUTPUT->render_from_template('mod_googleactivity/grading_app', $data);
     }
 
-    private function get_alphabet() {
+    private function get_alphabet()
+    {
 
         foreach (range('A', 'Z') as $letter) {
-            $group ['letter'][] = ['name' => $letter,
+            $group['letter'][] = [
+                'name' => $letter,
                 'url' => new moodle_url('/mod/googleactivity/view.php?action=grading&id' . $this->cm->id . 'tifirst=' . $letter)
             ];
         }
@@ -1426,7 +1558,8 @@ class googleactivity_rendering {
         return $group;
     }
 
-    private function get_status_style($isready, $permission, $graded) {
+    private function get_status_style($isready, $permission, $graded)
+    {
 
         if ($graded) {
             return ['Graded', ucfirst($permission), 'status-access'];
@@ -1438,7 +1571,8 @@ class googleactivity_rendering {
         }
     }
 
-    private function get_list_participants($googleactivityid) {
+    private function get_list_participants($googleactivityid)
+    {
         global $DB; // By selecting the user id first, you avoid the duplicate warning.
         $sql = "SELECT u.id, CONCAT(u.firstname,' ', u.lastname) as fullname, gf.* FROM mdl_google_activity_files as gf
                 JOIN mdl_user as u ON gf.userid = u.id
@@ -1452,7 +1586,7 @@ class googleactivity_rendering {
             $user->userid = $participant->userid;
             $user->fullname = $participant->fullname;
             list($user->grade, $user->comment) = get_grade_comments($googleactivityid, $participant->userid);
-            $users [] = $user;
+            $users[] = $user;
         }
 
         return $users;

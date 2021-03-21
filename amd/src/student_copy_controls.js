@@ -69,23 +69,7 @@ const createStudentFileCopyService = (distribution) => {
       },
       done: function (response) {
         var records = JSON.parse(response.records);
-
-        switch (distribution) {
-          case "std_copy":
-            renderCopyResults(records);
-            break;
-          case "dist_share_same":
-            renderCopyResults(records);
-            break;
-          case "std_copy_group":
-            renderCopyGroup(records);
-            break;
-          case "dist_share_same_group":
-            renderShareSameGroup(records);
-            break;
-          default:
-            break;
-        }
+        renderingHandler(records, distribution);
       },
       fail: function (reason) {
         Log.error(reason);
@@ -94,11 +78,31 @@ const createStudentFileCopyService = (distribution) => {
   ]);
 };
 
+const renderingHandler = (records, distribution) => {
+
+  if (distribution == "group_copy" || distribution == "dist_share_same_group") {
+    renderShareSameGroup(records, distribution);
+  }
+
+  if (distribution == "std_copy" || distribution == "dist_share_same") {
+    renderCopyResults(records);
+  }
+
+  if (distribution == "std_copy_group" || distribution == "std_copy_grouping") {
+    renderCopyGroup(records);
+  }
+
+  if (distribution == "dist_share_same_grouping") {
+    renderShareSameGrouping(records);
+  }
+};
+
 /**
  *
  * @param {*} records
  */
 const renderCopyResults = (records) => {
+  Log.debug("Rendering results ...");
   let i;
   const tablerows = document.querySelectorAll("#table-body tr");
 
@@ -113,7 +117,7 @@ const renderCopyResults = (records) => {
 };
 
 const renderCopyGroup = (records) => {
-  Log.debug("In renderStdCopyGroup...");
+  Log.debug("In renderCopyGroup...");
   // Combine the results.
   records = records.reduce(function (a, b) {
     return a.concat(b);
@@ -140,6 +144,7 @@ const renderShareSameGroup = (records) => {
 
   let i;
   const tablerows = document.querySelectorAll("#table-body tr");
+
   for (i = 0; i < tablerows.length; i++) {
     if (tablerows[i].hasAttribute("id")) {
       let groupId = tablerows[i].getAttribute("data-group-id");
@@ -151,6 +156,32 @@ const renderShareSameGroup = (records) => {
         .querySelector("#status_col")
         .classList.remove("spinner-border");
       tablerows[i].querySelector("#status_col").innerText = "Created";
+    }
+  }
+};
+
+const renderShareSameGrouping = (records) => {
+  Log.debug("In renderShareSameGrouping...");
+  // Combine the results.
+  records = records.reduce(function (a, b) {
+    return a.concat(b);
+  }, []);
+  Log.debug(records); 
+  let i;
+  const tablerows = document.querySelectorAll("#table-body tr");
+
+  for (i = 0; i < tablerows.length; i++) {
+
+    if (tablerows[i].hasAttribute("id")) {
+      let groupingId = tablerows[i].getAttribute("data-grouping-id");
+      let record = records.find((record) => record.groupingid == groupingId);
+
+      tablerows[i].querySelector("#shared_link_url_" + record.groupingid).href =
+        record.url;
+      tablerows[i]
+        .querySelector("#status_col_" + groupingId)
+        .classList.remove("spinner-border");
+      tablerows[i].querySelector("#status_col_" + groupingId).innerText = "Created";
     }
   }
 };

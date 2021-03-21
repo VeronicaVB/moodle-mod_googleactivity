@@ -34,28 +34,20 @@ import * as StudentCopyControls from "mod_googleactivity/student_copy_controls";
 // Prevent user from going backwards.
 window.onload = window.history.forward();
 
-/**
- *
- * @param {*} distribution
- */
-const addSpinners = (distribution) => {
+
+const addSpinners = (distribution, created) => {
   Log.debug("Adding spinners...");
   Log.debug(distribution);
 
-  if (distribution == "dist_share_same_group") {
-    $("tbody")
-      .find("[data-group-name]")
-      .each(function () {
-        $("div#status_col").addClass("spinner-border color");
-      });
+  if (distribution == "dist_share_same_group" || distribution == "group_copy") {
+    spinnerForGroupDistribution();
+  } else if (
+    distribution == "dist_share_same_grouping" ||
+    distribution == "grouping_copy"
+  ) {
+    spinnerForGroupingDistribution(created);
   } else {
-    $("tbody")
-      .children()
-      .each(function (e) {
-        if (distribution != "group_copy") {
-          $("#file_" + e).addClass("spinner-border color");
-        }
-      });
+    spinnerForStdDistribution();
   }
 };
 
@@ -65,14 +57,45 @@ const beforeunloadHandler = () => {
   });
 };
 
+const spinnerForGroupDistribution = () => {
+  $("tbody")
+    .find("[data-group-name]")
+    .each(function () {
+      $("div#status_col").addClass("spinner-border color");
+    });
+};
+
+const spinnerForGroupingDistribution = (created) => {
+  $("tbody")
+    .find("[data-grouping-name]")
+    .each(function () {
+      var gid = $(this).attr("data-grouping-id");
+      var statuscol = $(this).find("div#status_col_" + gid);
+      if (created) {
+        $(statuscol).html("Created");
+        $(statuscol).addClass("status-access");
+      } else {
+        $("div#status_col_" + gid).addClass("spinner-border color");
+      }
+    });
+};
+
+const spinnerForStdDistribution = () => {
+  $("tbody")
+    .children()
+    .each(function (e) {
+      $("#file_" + e).addClass("spinner-border color");
+    });
+};
+
 export const init = (created, distribution) => {
   Log.debug("mod_googleactivity: initializing mod_googledocs control");
   Log.debug(distribution, created);
 
-  // Its not createdd. Add spinners and block events.
+  // Its not created. Add spinners and block events.
   if (!created) {
     beforeunloadHandler();
-    addSpinners(distribution);
+    addSpinners(distribution, created);
 
     StudentCopyControls.init(distribution);
   }

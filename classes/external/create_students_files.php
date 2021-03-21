@@ -96,18 +96,26 @@ trait create_students_files
         // Get all teachers in the course.
         $teachers = get_enrolled_teachers($data->course);
         $students = json_decode($students);
+
+        if ($data->distribution == 'group_copy' || $data->distribution == 'dist_share_same_group') {
+            $records = $gdrive->dist_share_same_group_helper($data);
+        }
+
         switch ($data->distribution) {
             case 'std_copy':
                 $records = $gdrive->make_file_copies($students, $data);
                 break;
             case 'dist_share_same':
-                $records = $gdrive->dist_share_same_helper($students, $data); 
+                $records = $gdrive->dist_share_same_helper($students, $data);
                 break;
             case 'std_copy_group':
                 $records = $gdrive->make_file_copy_for_groups($data);
                 break;
-            case 'dist_share_same_group':
-                $records = $gdrive->dist_share_same_group_helper($data);
+            case 'std_copy_grouping':
+                $records = $gdrive->make_file_copy_for_grouping($data);
+                break;
+            case 'dist_share_same_grouping':
+                $records = $gdrive->dist_share_same_grouping_helper($data);
                 break;
 
             default:

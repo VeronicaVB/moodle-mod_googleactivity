@@ -215,11 +215,11 @@ function prepare_json($data, $courseid = 0)
  * @param type $conditionsjson
  * @return array of students with the format needed to create docs.
  */
-function get_users_in_group($conditionsjson, $courseid)
+function get_users_in_group($conditionsjson)
 {
     global $COURSE;
 
-    $groupmembers = get_group_members_ids($conditionsjson, $courseid);
+    $groupmembers = get_group_members_ids($conditionsjson, $COURSE->id);
     $courseusers = get_role_users(5, context_course::instance($COURSE->id));
     $users = null;
 
@@ -242,13 +242,17 @@ function get_users_in_group($conditionsjson, $courseid)
 function get_users_in_grouping($conditionsjson)
 {
     global $COURSE;
+    
     $courseusers = get_role_users(5, context_course::instance($COURSE->id));
     $groupingmembers = get_grouping_members_ids($conditionsjson);
+   
     foreach ($courseusers as $user) {
         if (in_array($user->id, $groupingmembers)) {
             $users[] = $user;
         }
     }
+
+  
     return $users;
 }
 
@@ -331,6 +335,7 @@ function get_groupings_details_from_json($data)
 function get_grouping_ids_from_json($data)
 {
     $groupingids = get_id_detail_from_json($data, "grouping");
+
     foreach ($groupingids as $id) {
         if (!groups_get_grouping_members($id, 'u.id')) {
             unset($groupingids[$id]);
@@ -364,15 +369,14 @@ function get_id_detail_from_json($groupgroupingjson, $type)
  * Group_grouping_condition: values to form the json
  */
 function get_students_based_on_group_grouping_distribution($dist, $group_grouping_condition)
-{
-    global $COURSE;
+{   
     $jsongroup = new stdClass();
     $jsongroup->c = $group_grouping_condition;    
-
-    if ($dist == 'dist_share_same_grouping' || $dist == 'grouping_copy' || $dist == 'std_copy_grouping') {
-        $students = get_users_in_grouping(($jsongroup->c));
+   
+    if ($dist == 'dist_share_same_grouping' || $dist == 'grouping_copy' || $dist == 'std_copy_grouping') {      
+        $students = get_users_in_grouping(json_encode($jsongroup));
     } else {
-        $students = get_users_in_group(json_encode($jsongroup), $COURSE->id);
+        $students = get_users_in_group(json_encode($jsongroup));
     }
 
     return array(json_encode($jsongroup), $students);
@@ -470,7 +474,6 @@ function get_enrolled_teachers($courseid)
  */
 function distribution_type($data_submmited, $dist)
 {
-
     if (
         !empty($data_submmited->groups) && $dist != ''
         && $data_submmited->distribution == 'std_copy'
