@@ -17,7 +17,7 @@
 /**
  *
  * @package    mod_googleactivity
- * @copyright  2020 Veronica Bermegui
+ * @copyright  2021 Veronica Bermegui
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 defined('MOODLE_INTERNAL') || die;
@@ -1288,6 +1288,11 @@ class googleactivity_rendering
             );
 
             $students = array_merge($studentsingroups, $studentsingroupings($id));
+            
+        } else if ($this->googleactivity->distribution == 'std_copy_group_grouping ') {
+            $studentsgroups = $this->get_students_by_group($this->coursestudents, $this->googleactivity->group_grouping_json, $this->googleactivity->course); 
+            $studentsgrouping = $this->get_students_by_grouping($this->coursestudents, $this->googleactivity->group_grouping_json, $this->googleactivity->course );
+            $students = array_merge($studentsgroups, $studentsgrouping);
         } else {
             $students = $this->get_students_by_grouping(
                 $this->coursestudents,

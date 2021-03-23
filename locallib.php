@@ -305,6 +305,7 @@ function get_groups_details_from_json($data)
         if ($c->type == 'group') {
             $g = new stdClass();
             $g->id = $c->id;
+            $g->type = $c->type;
             $g->name = groups_get_group_name($c->id);
             $groups[] = $g;
         }
@@ -325,6 +326,7 @@ function get_groupings_details_from_json($data)
         if ($c->type == 'grouping') {
             $g = new stdClass();
             $g->id = $c->id;
+            $g->type =  $c->type;
             $g->name = groups_get_grouping_name($c->id);
             $groupings[] = $g;
         }

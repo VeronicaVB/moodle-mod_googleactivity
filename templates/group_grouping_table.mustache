@@ -1,0 +1,70 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+    @package   mod_googleactivity
+    @copyright 2020 Veronica Bermegui
+    @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+}}
+
+{{!
+    @template mod_googleactivity/group_grouping_table
+
+    Google docs group and grouping content template.
+
+}}
+<div class="container-fluid table-container table-responsive">
+    {{> mod_googleactivity/show_activity_description }}
+    <table class="mod-googleactivity-files-view  table-bordered table-lg overviewTable table table-hover"
+           data-googleactivity-id = "{{docid}}" data-owner-email = "{{owneremail}}"
+           data-instance-id = "{{instanceid}}" data-from-existing = "{{from_existing}}" >
+        <thead class="thead-light">
+            <tr>
+                <th class="header ">Groups - Groupings</th>
+                <th class="header ">Members</th>
+                <th class="header">Link</th>
+                <th class="header">Status</th>
+                <th class="header">Student access</th>
+               
+            </tr>
+        </thead>
+        <tbody id = "table-body">
+            {{#group_grouping}}
+            {{#ggdetails}}
+                <tr id = "g_{{gid}}"  aria-expanded = "false" aria-controls = "g-{{gid}}" 
+                    data-g-name = "{{gname}}" data-g-id = "{{gid}}" data-g-type = "{{gtype}}">
+                    <td class="group-name-column" >
+                        <span >{{gname}}<span>
+                    </td>
+                    <td>{{{memberspictures}}}</td>
+                    <td id = "shared-link-g-id-{{g}}" class = "status-link-column">
+                        {{{fileicon}}}
+                    </td>
+                    <td class="status-link-column">
+                        {{{sharingstatus}}}
+                    </td>
+                    <td>
+                        {{studentaccess}}
+                    </td>
+                 
+                </tr>
+            {{/ggdetails}}
+        </tbody>
+
+     {{/group_grouping}}
+    </table>
+</div>
+
+

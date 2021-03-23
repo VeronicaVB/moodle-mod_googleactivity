@@ -79,7 +79,6 @@ const createStudentFileCopyService = (distribution) => {
 };
 
 const renderingHandler = (records, distribution) => {
-
   if (distribution == "group_copy" || distribution == "dist_share_same_group") {
     renderShareSameGroup(records, distribution);
   }
@@ -88,12 +87,20 @@ const renderingHandler = (records, distribution) => {
     renderCopyResults(records);
   }
 
-  if (distribution == "std_copy_group" || distribution == "std_copy_grouping") {
+  if (
+    distribution == "std_copy_group" ||
+    distribution == "std_copy_grouping" ||
+    distribution == "std_copy_group_grouping"
+  ) {
     renderCopyGroup(records);
   }
 
   if (distribution == "dist_share_same_grouping") {
     renderShareSameGrouping(records);
+  }
+
+  if (distribution == "group_grouping_copy") {
+    renderGroupGroupingCopy(records);
   }
 };
 
@@ -166,12 +173,11 @@ const renderShareSameGrouping = (records) => {
   records = records.reduce(function (a, b) {
     return a.concat(b);
   }, []);
-  Log.debug(records); 
+  Log.debug(records);
   let i;
   const tablerows = document.querySelectorAll("#table-body tr");
 
   for (i = 0; i < tablerows.length; i++) {
-
     if (tablerows[i].hasAttribute("id")) {
       let groupingId = tablerows[i].getAttribute("data-grouping-id");
       let record = records.find((record) => record.groupingid == groupingId);
@@ -181,7 +187,43 @@ const renderShareSameGrouping = (records) => {
       tablerows[i]
         .querySelector("#status_col_" + groupingId)
         .classList.remove("spinner-border");
-      tablerows[i].querySelector("#status_col_" + groupingId).innerText = "Created";
+      tablerows[i].querySelector("#status_col_" + groupingId).innerText =
+        "Created";
+    }
+  }
+};
+
+const renderGroupGroupingCopy = (records) => {
+  Log.debug("In renderGroupGroupingCopy...");
+  // Combine the results.
+  records = records.reduce(function (a, b) {
+    return a.concat(b);
+  }, []);
+  Log.debug(records);
+  let i;
+  const tablerows = document.querySelectorAll("#table-body tr");
+  for (i = 0; i < tablerows.length; i++) {
+    if (tablerows[i].hasAttribute("id")) {
+      let gId = tablerows[i].getAttribute("data-g-id");
+      let gType = tablerows[i].getAttribute("data-g-type");
+      let record;
+      if (gType == "grouping") {
+        record = records.find((record) => record.groupingid == gId);
+
+        tablerows[i].querySelector(
+          "#shared_link_url_" + record.groupingid
+        ).href = record.url;
+      } else {
+        record = records.find((record) => record.groupid == gId);
+
+        tablerows[i].querySelector("#shared_link_url_" + record.groupid).href =
+          record.url;
+      }
+
+      tablerows[i]
+        .querySelector("#status_col_" + gId)
+        .classList.remove("spinner-border");
+      tablerows[i].querySelector("#status_col_" + gId).innerText = "Created";
     }
   }
 };

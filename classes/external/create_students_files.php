@@ -117,6 +117,12 @@ trait create_students_files
             case 'dist_share_same_grouping':
                 $records = $gdrive->dist_share_same_grouping_helper($data);
                 break;
+            case 'std_copy_group_grouping':
+                $records = $gdrive->make_file_copy_for_groups($data, true);
+                break;
+            case 'group_grouping_copy': 
+                $records = $gdrive->make_file_group_grouping_helper($data);
+                break;
 
             default:
                 # code...

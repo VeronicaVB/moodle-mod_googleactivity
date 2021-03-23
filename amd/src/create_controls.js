@@ -34,7 +34,6 @@ import * as StudentCopyControls from "mod_googleactivity/student_copy_controls";
 // Prevent user from going backwards.
 window.onload = window.history.forward();
 
-
 const addSpinners = (distribution, created) => {
   Log.debug("Adding spinners...");
   Log.debug(distribution);
@@ -46,6 +45,8 @@ const addSpinners = (distribution, created) => {
     distribution == "grouping_copy"
   ) {
     spinnerForGroupingDistribution(created);
+  } else if (distribution == "group_grouping_copy") {
+    spinnerForGroupGroupingCopy();
   } else {
     spinnerForStdDistribution();
   }
@@ -70,6 +71,21 @@ const spinnerForGroupingDistribution = (created) => {
     .find("[data-grouping-name]")
     .each(function () {
       var gid = $(this).attr("data-grouping-id");
+      var statuscol = $(this).find("div#status_col_" + gid);
+      if (created) {
+        $(statuscol).html("Created");
+        $(statuscol).addClass("status-access");
+      } else {
+        $("div#status_col_" + gid).addClass("spinner-border color");
+      }
+    });
+};
+
+const spinnerForGroupGroupingCopy = (created) => {
+  $("tbody")
+    .find("[data-g-name]")
+    .each(function () {
+      var gid = $(this).attr("data-g-id");
       var statuscol = $(this).find("div#status_col_" + gid);
       if (created) {
         $(statuscol).html("Created");
