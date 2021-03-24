@@ -99,7 +99,10 @@ const renderingHandler = (records, distribution) => {
     renderShareSameGrouping(records);
   }
 
-  if (distribution == "group_grouping_copy") {
+  if (
+    distribution == "group_grouping_copy" ||
+    distribution == "dist_share_same_group_grouping"
+  ) {
     renderGroupGroupingCopy(records);
   }
 };

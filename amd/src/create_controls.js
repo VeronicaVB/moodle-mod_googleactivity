@@ -45,7 +45,10 @@ const addSpinners = (distribution, created) => {
     distribution == "grouping_copy"
   ) {
     spinnerForGroupingDistribution(created);
-  } else if (distribution == "group_grouping_copy") {
+  } else if (
+    distribution == "group_grouping_copy" ||
+    distribution == "dist_share_same_group_grouping"
+  ) {
     spinnerForGroupGroupingCopy();
   } else {
     spinnerForStdDistribution();
