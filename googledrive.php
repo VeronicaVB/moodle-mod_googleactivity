@@ -726,8 +726,7 @@ class googledrive
             }
 
             $results = $batch->execute();
-
-
+            // TODO: collect errors
             // foreach ($results as $result) {
             //     if ($result instanceof Google_Service_Exception) {
             //         // Handle error
@@ -771,7 +770,7 @@ class googledrive
             foreach ($groupdetails as $g) {
 
                 $groups[$g->id] = $g->name;
-                $groupstudents[$g->id] =  groups_get_members($g->id, $fields = 'u.*');
+                $groupstudents[$g->id] =  groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
             }
 
             // Set the files details.
@@ -887,7 +886,7 @@ class googledrive
 
         // Get the members of each grouping
         foreach ($groupingds as $groupingid) {
-            $groupingmembers[$groupingid] = groups_get_grouping_members($groupingid, $fields = 'u.*');
+            $groupingmembers[$groupingid] = groups_get_grouping_members($groupingid, 'u.id, u.firstname, u.lastname, u.email');
         }
         foreach ($parentrecords as $record) {
             $parentref = $record->folder_id;
@@ -913,7 +912,7 @@ class googledrive
             foreach ($groupingsdetails as $g) {
 
                 $groupings[$g->id] = $g->name;
-                $groupingstudents[$g->id] =  groups_get_grouping_members($g->id, $fields = 'u.*');
+                $groupingstudents[$g->id] =  groups_get_grouping_members($g->id,  'u.id, u.firstname, u.lastname, u.email');
             }
 
             // Set the files details.
@@ -1030,11 +1029,11 @@ class googledrive
             foreach ($ggdetails as $g) {
 
                 $groups[$g->id] = $g->name;
-                
-                if ($g->type == 'group') { // TODO: Only pass id, first and last names and email
-                    $groupstudents[$g->type . '_' . $g->id] =  groups_get_members($g->id, $fields = 'u.*'); 
+
+                if ($g->type == 'group') {
+                    $groupstudents[$g->type . '_' . $g->id] =  groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
                 } else {
-                    $groupstudents[$g->type . '_' . $g->id] = groups_get_grouping_members($g->id, $fields = 'u.*');
+                    $groupstudents[$g->type . '_' . $g->id] = groups_get_grouping_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
                 }
             }
 
@@ -1068,7 +1067,7 @@ class googledrive
             $results = $batch->execute();
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
             $errors = []; //Collect any errors.
-            
+
             foreach ($results as $result) {
                 $isgroupinggroup = false;
 
@@ -1077,13 +1076,13 @@ class googledrive
                     //  $errors [] = $result->message;
                 } else {
                     // Get groupid from file name 
-                        $groupid = end(explode('_', $result->title));
+                    $groupid = end(explode('_', $result->title));
 
                     if (isset($groupings[$groupid])) {
                         $students = $groupstudents['grouping' . '_' . $groupid];
                         $isgroupinggroup = true;
                     } else {
-                       // $groupid = end(explode('_', $result->title));
+                        // $groupid = end(explode('_', $result->title));
                         $students = $groupstudents['group' . '_' . $groupid];
                     }
 
@@ -1131,9 +1130,7 @@ class googledrive
                         }
 
                         $records[] = $entityfiledata;
-
                     }
-                   
                 }
             }
 
@@ -1152,8 +1149,109 @@ class googledrive
     }
 
 
+    public function dist_share_same_group_grouping_herper($data)
+    {
 
+        global $DB;
 
+        try {
+
+            $groupingsdetails = get_groupings_details_from_json(json_decode($data->group_grouping_json));
+            $groupsdetails =  get_groups_details_from_json(json_decode($data->group_grouping_json));
+
+            $ggdetails = array_merge($groupsdetails, $groupingsdetails);
+
+            $this->service->getClient()->setUseBatch(true);
+            $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
+            $emailMessage = get_string('emailmessageGoogleNotification', 'googleactivity', $this->set_email_message_content());
+            list($role, $commenter) = format_permission($data->permissions);
+            $records = [];
+
+            $groupstudents = [];
+            $groupingstudents = [];
+
+            foreach ($ggdetails as $g) {
+
+                $groups[$g->id] = $g->name;
+
+                if ($g->type == 'group') {
+                    $groupstudents[$g->type . '_' . $g->id] =  groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
+                } else {
+                    $groupingstudents[$g->type . '_' . $g->id] = groups_get_grouping_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
+                }
+            }
+
+            $studentsaux = array_merge($groupstudents, $groupingstudents);
+
+            foreach ($studentsaux as $st => $studenting) {
+                $groupid = 0;
+                $groupingid = 0;
+                $typeandid = explode('_', $st);
+
+                if ($typeandid[0] == 'group') {
+                    $groupid = $typeandid[1];
+                } else {
+                    $groupingid = $typeandid[1];
+                }
+
+                foreach ($studenting as $student) {
+                    $student->groupid = $groupid;
+                    $student->groupingid = $groupingid;
+                    $students[] = $student;
+                }
+            }
+           
+            foreach ($students as $student) {
+                if ($commenter) {
+
+                    $batch->add($this->service->permissions->insert(
+                        $data->docid,
+                        new Google_Service_Drive_Permission(array(
+                            'type' => 'user',
+                            'role' => $role,
+                            'additionalRoles' => ['commenter'],
+                            'value' => $student->email,
+                            'emailMessage' => $emailMessage,
+                        ))
+                    ));
+                } else {
+
+                    $batch->add($this->service->permissions->insert(
+                        $data->docid,
+                        new Google_Service_Drive_Permission(array(
+                            'type' => 'user',
+                            'role' => $role,
+                            'value' => $student->email,
+                            'emailMessage' => $emailMessage,
+                        ))
+                    ));
+                }
+
+                $entityfiledata = new stdClass();
+                $entityfiledata->userid = $student->id;
+                $entityfiledata->googleactivityid = $data->id;
+                $entityfiledata->name = $data->name;
+                $entityfiledata->url = $data->google_doc_url;
+                $entityfiledata->permission = $data->permissions;
+                $entityfiledata->groupid = $student->groupid;
+                $entityfiledata->groupingid = $student->groupingid;
+
+                $records[] = $entityfiledata;
+            }
+
+            $results = $batch->execute(); // TODO: Collect errors.
+
+            $DB->insert_records('google_activity_files', $records);
+            $data->sharing = 1; // It got here means that at least is being shared with one.
+            $DB->update_record('googleactivity', $data);
+
+        } catch (Exception $e) {
+            throw $e;
+        } finally {
+            $this->service->getClient()->setUseBatch(false);
+            return $records;
+        }
+    }
 
 
     /***************** HELPER FUNCTIONS *************** */
