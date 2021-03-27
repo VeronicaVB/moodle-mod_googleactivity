@@ -72,10 +72,10 @@ function googleactivity_supports($feature)
  */
 function googleactivity_add_instance(stdClass $googleactivity, mod_googleactivity_mod_form $mform = null)
 {
-    global $DB, $USER;
+    global $USER;
 
     try {
-       // print_object($googleactivity);exit;
+      // print_object($googleactivity);exit;
 
         $googleactivity->timecreated = time();
 
@@ -91,9 +91,7 @@ function googleactivity_add_instance(stdClass $googleactivity, mod_googleactivit
         $author = array('emailAddress' => $USER->email, 'displayName' => fullname($USER));
         $students = get_enrolled_students($googleactivity->course);
         $group_grouping = [];
-        $intro = (($mform->get_submitted_data())->introeditor);
         $dist = '';
-        
         
         // Check if the distribution involves groups and/ or groupings.
         if (!empty(($mform->get_submitted_data())->groups) && !everyone(($mform->get_submitted_data())->groups)) {
@@ -102,21 +100,19 @@ function googleactivity_add_instance(stdClass $googleactivity, mod_googleactivit
 
         list($dist, $owncopy) = distribution_type($mform->get_submitted_data(), $dist);
         
-        
         if (!empty($group_grouping)) {
             list($googleactivity->group_grouping_json, $students) = get_students_based_on_group_grouping_distribution($dist, $group_grouping);
-            
         }
-       // var_dump($students); exit;
+
         if ($students == null) {
             throw new exception('No Students provided. The files were not created');
         }
-
 
         if ($googleactivity->use_document == 'existing') {
 
             $googleactivity->document_type = get_file_type_from_string($googleactivity->google_doc_url);
             list($file, $parentfolderid) = $gdrive->share_existing_file($googleactivity, $author);
+            
         } else {
 
             // Save file in a new folder.            
@@ -134,10 +130,11 @@ function googleactivity_add_instance(stdClass $googleactivity, mod_googleactivit
             $googleactivity->name = $googleactivity->name_doc; // In case it looses the name when creating.
         }
 
-        $googleactivity->id = save_instance($googleactivity, $file, $file->alternateLink, $parentfolderid, $owncopy, $dist, $intro);
+        $googleactivity->id = save_instance($googleactivity, $file, $file->alternateLink, $parentfolderid, $owncopy, $dist);
         //googleactivity_grade_item_update($googleactivity);
 
         return $googleactivity->id;
+
     } catch (Exception $ex) {
 
         throw $ex;

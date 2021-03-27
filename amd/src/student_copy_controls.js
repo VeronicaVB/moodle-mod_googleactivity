@@ -205,11 +205,13 @@ const renderGroupGroupingCopy = (records) => {
   Log.debug(records);
   let i;
   const tablerows = document.querySelectorAll("#table-body tr");
+
   for (i = 0; i < tablerows.length; i++) {
     if (tablerows[i].hasAttribute("id")) {
       let gId = tablerows[i].getAttribute("data-g-id");
       let gType = tablerows[i].getAttribute("data-g-type");
       let record;
+
       if (gType == "grouping") {
         record = records.find((record) => record.groupingid == gId);
 
@@ -217,6 +219,7 @@ const renderGroupGroupingCopy = (records) => {
           "#shared_link_url_" + record.groupingid
         ).href = record.url;
       } else {
+        Log.debug(gId);
         record = records.find((record) => record.groupid == gId);
 
         tablerows[i].querySelector("#shared_link_url_" + record.groupid).href =

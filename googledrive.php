@@ -1062,28 +1062,30 @@ class googledrive
                 $batch->add($filecopy);
             }
 
-
-            // Create the copies
+            // Create the copies.
             $results = $batch->execute();
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
             $errors = []; //Collect any errors.
 
             foreach ($results as $result) {
-                $isgroupinggroup = false;
+
 
                 if ($result instanceof Google_Service_Exception) {
                     // printf($result); exit;
                     //  $errors [] = $result->message;
                 } else {
-                    // Get groupid from file name 
-                    $groupid = end(explode('_', $result->title));
-
-                    if (isset($groupings[$groupid])) {
+                    // Get groupid from file name .
+                    $groupid =  0;
+                    $groupingid = 0;
+                    // Get the folder name to see if it match a group or grouping
+                    $parentfoldername = $this->getParentFolderName($result->id);
+                    //print 'File Id: ' . $parentfoldername;
+                    if (is_grouping($groupings, $parentfoldername)) {
                         $students = $groupstudents['grouping' . '_' . $groupid];
-                        $isgroupinggroup = true;
+                        $groupingid = end(explode('_', $result->title));
                     } else {
-                        // $groupid = end(explode('_', $result->title));
                         $students = $groupstudents['group' . '_' . $groupid];
+                        $groupid = end(explode('_', $result->title));
                     }
 
                     // Permission for each student in the group.
@@ -1113,24 +1115,18 @@ class googledrive
                                 ))
                             ));
                         }
-
-                        $entityfiledata = new stdClass();
-                        $entityfiledata->userid = end(explode('_', $result->title));
-                        $entityfiledata->googleactivityid = $data->id;
-                        $entityfiledata->name = $result->title;
-                        $entityfiledata->url = sprintf($fileproperties[$data->document_type]['linktemplate'], $result->id);;
-                        $entityfiledata->permission = $data->permissions;
-
-                        if (!$isgroupinggroup) {
-                            $entityfiledata->groupid = $groupid;
-                            $entityfiledata->groupingid = 0;
-                        } else {
-                            $entityfiledata->groupid = 0;
-                            $entityfiledata->groupingid = $groupid;
-                        }
-
-                        $records[] = $entityfiledata;
                     }
+
+                    $entityfiledata = new stdClass();
+                    $entityfiledata->userid = end(explode('_', $result->title));
+                    $entityfiledata->googleactivityid = $data->id;
+                    $entityfiledata->name = $result->title;
+                    $entityfiledata->url = sprintf($fileproperties[$data->document_type]['linktemplate'], $result->id);;
+                    $entityfiledata->permission = $data->permissions;
+                    $entityfiledata->groupid = $groupid;
+                    $entityfiledata->groupingid = $groupingid;
+
+                    $records[] = $entityfiledata;
                 }
             }
 
@@ -1140,7 +1136,7 @@ class googledrive
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
         } catch (exception $e) {
-            var_dump($e);
+            //var_dump($e);
             throw $e;
         } finally {
             $this->service->getClient()->setUseBatch(false);
@@ -1200,7 +1196,7 @@ class googledrive
                     $students[] = $student;
                 }
             }
-           
+
             foreach ($students as $student) {
                 if ($commenter) {
 
@@ -1244,7 +1240,6 @@ class googledrive
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
-
         } catch (Exception $e) {
             throw $e;
         } finally {
@@ -1351,7 +1346,7 @@ class googledrive
 
             foreach ($ggdetails as $g) {
 
-                // Create group folders
+                // Create group folders.
                 $fileMetadata = new \Google_Service_Drive_DriveFile(array(
                     'title' => $g->name . '_' . $g->id,
                     'mimeType' => GDRIVEFILETYPE_FOLDER,
@@ -1386,6 +1381,7 @@ class googledrive
                         if ($name == $result->title) {
                             $gg = new \stdClass();
                             $gg->folderid = $r;
+                            $gg->foldername = $name;
                             $gg->groupingid = $grouping->id;
                             $groupings[$grouping->id] = $gg;
                         }
@@ -1517,9 +1513,11 @@ class googledrive
     public function getFile($fileId)
     {
         try {
+
             $file = $this->service->files->get($fileId);
             return $file;
         } catch (Exception $e) {
+            var_dump($e);
             throw $e;
         }
     }
@@ -1577,5 +1575,47 @@ class googledrive
         }
 
         return $allgroups;
+    }
+
+    /**
+     * Get a file's parent details.
+     *
+     * @param Google_Service_Drive $service Drive API service instance.
+     * @param String $fileId ID of the file to print parents for.
+     */
+    function getParentFolderName($fileId)
+    {
+        try {
+
+            $parentfoldername = '';
+            $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
+            $batch->add($this->service->parents->listParents($fileId));
+
+            $results = $batch->execute();
+
+            foreach ($results as $result) {
+
+
+                if ($result instanceof Google_Service_Exception) {
+                    //  $errors [] = $result->message;
+                } else {
+                    foreach ($result->getItems() as $parent) {
+
+                        $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
+                        $batch->add($this->service->files->get($parent->getId()));
+                        $parentdetails = $batch->execute();
+
+                        foreach ($parentdetails as $parent) {
+                            $parentfoldername = $parent->title; // Get the name of the folder, that is the name of the group or grouping.
+                        }
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            throw $e;
+        } finally {
+            //$this->service->getClient()->setUseBatch(false); Dont close the batch otherwise it will only process one.
+            return $parentfoldername;
+        }
     }
 }

@@ -544,11 +544,20 @@ function save_instance(
     $googleactivity->timeshared = (strtotime($file->createdDate));
     $googleactivity->timemodified = $googleactivity->timecreated;
     $googleactivity->name = empty($googleactivity->name_doc) ? $file->title : $googleactivity->name_doc;
-    $googleactivity->intro = '';//$intro['text'];
     $googleactivity->use_document = $googleactivity->use_document;
     $googleactivity->sharing = 0;
     $googleactivity->distribution = $dist;
-    $googleactivity->introformat = '';//$intro['format'];
 
     return $DB->insert_record('googleactivity', $googleactivity);
+}
+
+// WHen distribution is group_grouping we need to know if its a grouping to get the id.
+function is_grouping($groupings, $foldername) {
+    foreach ($groupings as $grouping) {
+        if ($grouping->foldername == $foldername) {
+            return true;
+        }
+    }
+
+    return false;
 }
