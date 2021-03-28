@@ -69,7 +69,19 @@ const createStudentFileCopyService = (distribution) => {
       },
       done: function (response) {
         var records = JSON.parse(response.records);
-        renderingHandler(records, distribution);
+        // Combine the results.
+        records = records.reduce(function (a, b) {
+          return a.concat(b);
+        }, []);
+
+        var status = JSON.parse(response.status);
+        // Combine the results.
+        status = status.reduce(function (a, b) {
+          return a.concat(b);
+        }, []);
+
+        Log.debug(status);
+        renderingHandler(records, distribution, status);
       },
       fail: function (reason) {
         Log.error(reason);
@@ -78,13 +90,13 @@ const createStudentFileCopyService = (distribution) => {
   ]);
 };
 
-const renderingHandler = (records, distribution) => {
+const renderingHandler = (records, distribution, status) => {
   if (distribution == "group_copy" || distribution == "dist_share_same_group") {
-    renderShareSameGroup(records, distribution);
+    renderShareSameGroup(records, distribution, status);
   }
 
   if (distribution == "std_copy" || distribution == "dist_share_same") {
-    renderCopyResults(records);
+    renderCopyResults(records, status);
   }
 
   if (
@@ -92,26 +104,27 @@ const renderingHandler = (records, distribution) => {
     distribution == "std_copy_grouping" ||
     distribution == "std_copy_group_grouping"
   ) {
-    renderCopyGroup(records);
+    renderCopyGroup(records, status);
   }
 
   if (distribution == "dist_share_same_grouping") {
-    renderShareSameGrouping(records);
+    renderShareSameGrouping(records, status);
   }
 
   if (
     distribution == "group_grouping_copy" ||
     distribution == "dist_share_same_group_grouping"
   ) {
-    renderGroupGroupingCopy(records);
+    renderGroupGroupingCopy(records, status);
   }
 };
 
 /**
  *
  * @param {*} records
+ * @param {*} status
  */
-const renderCopyResults = (records) => {
+const renderCopyResults = (records, status) => {
   Log.debug("Rendering results ...");
   let i;
   const tablerows = document.querySelectorAll("#table-body tr");
@@ -119,39 +132,63 @@ const renderCopyResults = (records) => {
   for (i = 0; i < tablerows.length; i++) {
     let studentId = tablerows[i].getAttribute("data-student-id");
     let record = records.find((record) => record.userid == studentId);
+    let creationStatus = status.find(
+      (creationstat) => creationstat.userid == studentId
+    );
+    let message = "";
 
-    tablerows[i].querySelector("#link_file_" + i).href = record.url;
+    if (!record) {
+      message = "Failed";
+      Log.debug(
+        "StudentId:  " +
+          studentId +
+          "Creation status: " +
+          creationStatus.creation_status
+      );
+    } else {
+      tablerows[i].querySelector("#link_file_" + i).href = record.url;
+      message = "Created";
+    }
     tablerows[i].querySelector("#file_" + i).classList.remove("spinner-border");
-    tablerows[i].querySelector("#file_" + i).innerText = "Created";
+    tablerows[i].querySelector("#file_" + i).innerText = message;
   }
 };
 
-const renderCopyGroup = (records) => {
+const renderCopyGroup = (records, status) => {
   Log.debug("In renderCopyGroup...");
-  // Combine the results.
-  records = records.reduce(function (a, b) {
-    return a.concat(b);
-  }, []);
 
+  Log.debug(status);
   let i;
   const tablerows = document.querySelectorAll("#table-body tr");
+
   for (i = 0; i < tablerows.length; i++) {
     let studentId = tablerows[i].getAttribute("data-student-id");
     let record = records.find((record) => record.userid == studentId);
+    let creationStatus = status.find(
+      (creationstat) => creationstat.userid == studentId
+    );
+    let message = "";
 
-    tablerows[i].querySelector("#link_file_" + i).href = record.url;
+    if (!record) {
+      message = "Failed";
+      Log.debug(
+        "StudentId:  " +
+          studentId +
+          "Creation status: " +
+          creationStatus.creation_status
+      );
+    } else {
+      tablerows[i].querySelector("#link_file_" + i).href = record.url;
+      message = "Created";
+    }
+
     tablerows[i].querySelector("#file_" + i).classList.remove("spinner-border");
-    tablerows[i].querySelector("#file_" + i).innerText = "Created";
+    tablerows[i].querySelector("#file_" + i).innerText = message;
   }
 };
 
-const renderShareSameGroup = (records) => {
+const renderShareSameGroup = (records, status) => {
   Log.debug("In renderShareSameGroup...");
-  // Combine the results.
-  records = records.reduce(function (a, b) {
-    return a.concat(b);
-  }, []);
-
   let i;
   const tablerows = document.querySelectorAll("#table-body tr");
 
@@ -170,40 +207,53 @@ const renderShareSameGroup = (records) => {
   }
 };
 
-const renderShareSameGrouping = (records) => {
+const renderShareSameGrouping = (records, status) => {
   Log.debug("In renderShareSameGrouping...");
-  // Combine the results.
-  records = records.reduce(function (a, b) {
-    return a.concat(b);
-  }, []);
+
   Log.debug(records);
+  Log.debug(status);
   let i;
+
   const tablerows = document.querySelectorAll("#table-body tr");
 
   for (i = 0; i < tablerows.length; i++) {
     if (tablerows[i].hasAttribute("id")) {
       let groupingId = tablerows[i].getAttribute("data-grouping-id");
       let record = records.find((record) => record.groupingid == groupingId);
+      let failedStat = status.find((stat) => stat.creation_status != "OK");
+      let message = "";
 
-      tablerows[i].querySelector("#shared_link_url_" + record.groupingid).href =
-        record.url;
+      if (failedStat) {
+        warningInfo();
+      }
+      if (!record) {
+        message = "Failed";
+        Log.debug(
+          "groupingId:  " + groupingId + "Creation status: " + failedStat
+        );
+      } else {
+        message = "Created";
+        tablerows[i].querySelector(
+          "#shared_link_url_" + record.groupingid
+        ).href = record.url;
+      }
+
       tablerows[i]
         .querySelector("#status_col_" + groupingId)
         .classList.remove("spinner-border");
-      tablerows[i].querySelector("#status_col_" + groupingId).innerText =
-        "Created";
+      tablerows[i].querySelector(
+        "#status_col_" + groupingId
+      ).innerText = message;
     }
   }
 };
 
-const renderGroupGroupingCopy = (records) => {
+const renderGroupGroupingCopy = (records, status) => {
   Log.debug("In renderGroupGroupingCopy...");
-  // Combine the results.
-  records = records.reduce(function (a, b) {
-    return a.concat(b);
-  }, []);
+
   Log.debug(records);
   let i;
+
   const tablerows = document.querySelectorAll("#table-body tr");
 
   for (i = 0; i < tablerows.length; i++) {
@@ -211,16 +261,28 @@ const renderGroupGroupingCopy = (records) => {
       let gId = tablerows[i].getAttribute("data-g-id");
       let gType = tablerows[i].getAttribute("data-g-type");
       let record;
+      let failedStat = status.find((stat) => stat.creation_status != "OK");
+      let message = "";
+
+      if (failedStat) {
+        warningInfo();
+      }
 
       if (gType == "grouping") {
         record = records.find((record) => record.groupingid == gId);
-
-        tablerows[i].querySelector(
-          "#shared_link_url_" + record.groupingid
-        ).href = record.url;
+        if (!record) {
+          message = "Failed";
+        } else {
+          tablerows[i].querySelector(
+            "#shared_link_url_" + record.groupingid
+          ).href = record.url;
+        }
       } else {
-        Log.debug(gId);
         record = records.find((record) => record.groupid == gId);
+
+        if (!records) {
+          message = "Failed";
+        }
 
         tablerows[i].querySelector("#shared_link_url_" + record.groupid).href =
           record.url;
@@ -229,9 +291,23 @@ const renderGroupGroupingCopy = (records) => {
       tablerows[i]
         .querySelector("#status_col_" + gId)
         .classList.remove("spinner-border");
-      tablerows[i].querySelector("#status_col_" + gId).innerText = "Created";
+      tablerows[i].querySelector("#status_col_" + gId).innerText = message;
     }
   }
+};
+
+// Warning tag
+
+const warningInfo = () => {
+  let div = document.createElement("div");
+  let table = document.querySelector("table.mod-googleactivity-files-view");
+  div.classList.add("alert");
+  div.classList.add("alert-warning");
+  let text = document.createTextNode(
+    "There were some errors in the process..."
+  );
+  div.appendChild(text);
+  table.insertAdjacentElement("afterEnd", div);
 };
 
 export const init = (distribution) => {
