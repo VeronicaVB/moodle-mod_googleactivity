@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="mod/googleactivity/db" VERSION="20210327" COMMENT="XMLDB file for Moodle mod/googleactivity"
+<XMLDB PATH="mod/googleactivity/db" VERSION="20210328" COMMENT="XMLDB file for Moodle mod/googleactivity"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
@@ -68,7 +68,7 @@
         <FIELD NAME="docid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="File ID given by Google Drive"/>
         <FIELD NAME="googleactivityid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Instance ID (from mdl_googleactivity)"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Student ID (from mdl_user)"/>
-        <FIELD NAME="creation_status" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="0 = Not created 1 = Created"/>
+        <FIELD NAME="creation_status" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

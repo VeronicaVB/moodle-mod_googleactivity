@@ -117,7 +117,7 @@ function googleactivity_add_instance(stdClass $googleactivity, mod_googleactivit
 
             // Save file in a new folder.            
             list($parentfolderid, $createddate) = $gdrive->create_folder($googleactivity->name_doc, $author);
-
+            
             // Create master file.
             $file =  $gdrive->create_file(
                 $googleactivity->name_doc,

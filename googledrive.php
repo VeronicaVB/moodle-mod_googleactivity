@@ -51,10 +51,6 @@ class googledrive
         \Google_Service_Drive::DRIVE_FILE
     );
 
-    // const GDRIVEFILEPERMISSION_COMMENTER = 'comment'; // Student can Read and Comment.
-    // const GDRIVEFILEPERMISSION_EDITOR = 'edit'; // Students can Read and Write.
-    // const GDRIVEFILEPERMISSION_READER = 'view'; // Students can read.
-
     const GDRIVEFILETYPE_DOCUMENT = 'document';
     const GDRIVEFILETYPE_PRESENTATION  = 'presentation';
     const GDRIVEFILETYPE_SPREADSHEET = 'spreadsheets';
@@ -63,7 +59,7 @@ class googledrive
     // calling mod_url cmid
     private $cmid = null;
 
-    // Author (probably the teacher) array(type, role, emailAddress, displayName)
+    // Author (the teacher) array(type, role, emailAddress, displayName)
     private $author = array();
 
     // List (array) of students (array)
@@ -71,7 +67,8 @@ class googledrive
 
     private $api_key;
     private $referrer;
-    private $googledocinstance;
+    private $googleactivityinstance;
+
     private $batch;
 
 
@@ -109,7 +106,7 @@ class googledrive
         $this->client->setClientSecret($this->issuer->get('clientsecret'));
         $this->client->setAccessType('offline');
         $this->client->setApprovalPrompt('force');
-        //$this->client->setHostedDomain('cgs.act.edu.au');
+        $this->client->setHostedDomain((get_config('mod_googleactivity'))->domain);
 
         $returnurl = new moodle_url(self::CALLBACKURL);
         $this->client->setRedirectUri($returnurl->out(false));
@@ -385,12 +382,11 @@ class googledrive
                 );
             }
 
-
             $sharedlink = sprintf($fileproperties[$gfiletype]['linktemplate'], $file->id);
 
             return $file;
         } catch (Exception $ex) {
-            throw  new exception('There was an error when creating the file');
+            throw   $ex;
         }
     }
 
@@ -459,6 +455,8 @@ class googledrive
             $this->service->getClient()->setUseBatch(true);
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
             $records = [];
+            $status = [];
+            $i = 0;
 
             foreach ($students as $student) {
 
@@ -466,11 +464,26 @@ class googledrive
                 $file =  new \Google_Service_Drive_DriveFile();
                 $file->setTitle($copyname);
                 $file->setTitle($copyname);
-                $filecopy = $this->service->files->copy($data->docid, $file);
+
+                if ($data->document_type == 'folder') {
+                    $parentRef =  new Google_Service_Drive_ParentReference();
+                    $parentRef->setId($data->parentfolderid);
+                    $file->setMimeType(GDRIVEFILETYPE_FOLDER);
+                    $file->setParents([$parentRef]);
+                    $filecopy = $this->service->files->insert($file);
+                } else {
+                    $filecopy = $this->service->files->copy($data->docid, $file);
+                }
                 $batch->add($filecopy);
+
+                $studentstat = new \stdClass();
+                $studentstat->googleactivityid = $data->id;
+                $studentstat->userid = $student->studentId;
+
+                $status[] = $studentstat;
             }
 
-            // Create the copies
+
             $results = $batch->execute();
             // New object so it doesn't add to the previous lot.
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
@@ -478,7 +491,11 @@ class googledrive
             foreach ($results as $result) {
 
                 if ($result instanceof Google_Service_Exception) {
-                    //var_dump($result);
+                    // Handle error              
+                    $staux =  $status[$i];
+                    $staux->creation_status = json_encode($result->getErrors());
+                    $status[$i] = $staux;
+                    $i++;
                 } else {
 
                     $value = new \stdClass();
@@ -493,10 +510,11 @@ class googledrive
                                 new Google_Service_Drive_Permission(array(
                                     'type' => 'user',
                                     'role' => $role,
-                                    'additionalRoles' => 'commenter',
+                                    'additionalRoles' => ['commenter'],
                                     'value' => $value->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         } else {
 
@@ -506,8 +524,8 @@ class googledrive
                                     'type' => 'user',
                                     'role' => $role,
                                     'value' => $value->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         }
 
@@ -519,6 +537,11 @@ class googledrive
                         $entityfiledata->permission = $data->permissions;
 
                         $records[] = $entityfiledata;
+
+                        $staux =  $status[$i];
+                        $staux->creation_status = 'OK';
+                        $status[$i] = $staux;
+                        $i++;
                     }
                 }
             }
@@ -528,12 +551,13 @@ class googledrive
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
+
+            $DB->insert_records('google_activity_work_task', $status);
         } catch (Exception $e) {
             throw ($e);
         } finally {
-
             $this->service->getClient()->setUseBatch(false);
-            return $records;
+            return [$records, $status];
         }
     }
 
@@ -551,6 +575,8 @@ class googledrive
             $emailMessage = get_string('emailmessageGoogleNotification', 'googleactivity', $this->set_email_message_content());
             list($role, $commenter) = format_permission($data->permissions);
             $records = [];
+            $status = [];
+            $i = 0;
 
             foreach ($students as $student) {
                 if ($commenter) {
@@ -562,9 +588,8 @@ class googledrive
                             'role' => $role,
                             'additionalRoles' => ['commenter'],
                             'value' => $student->studentEmail,
-                            'emailMessage' => $emailMessage,
                         ))
-                    ));
+                    ),   ['emailMessage' => $emailMessage]);
                 } else {
 
                     $batch->add($this->service->permissions->insert(
@@ -573,11 +598,11 @@ class googledrive
                             'type' => 'user',
                             'role' => $role,
                             'value' => $student->studentEmail,
-                            'emailMessage' => $emailMessage,
-                        ))
+
+                        )),
+                        ['emailMessage' => $emailMessage]
                     ));
                 }
-
 
                 $entityfiledata = new stdClass();
                 $entityfiledata->userid = $student->studentId;
@@ -587,27 +612,43 @@ class googledrive
                 $entityfiledata->permission = $data->permissions;
 
                 $records[] = $entityfiledata;
+
+
+                $studentstat = new \stdClass();
+                $studentstat->googleactivityid = $data->id;
+                $studentstat->userid = $student->studentId;
+
+                $status[] = $studentstat;
             }
 
             $results = $batch->execute();
 
-            // foreach ($results as $result) {
-            //     if ($result instanceof Google_Service_Exception) {
-            //         // Handle error
-            //       //  printf($result);
-            //     } else {
-            //         //printf("Permission ID: %s\n", $result->id);
-            //     }
-            // }
+            foreach ($results as $result) {
+                if ($result instanceof Google_Service_Exception) {
+                    // Handle error              
+                    $staux =  $status[$i];
+                    $staux->creation_status = json_encode($result->getErrors());
+                    $status[$i] = $staux;
+                    $i++;
+                } else {
+
+                    $staux =  $status[$i];
+                    $staux->creation_status = 'OK';
+                    $status[$i] = $staux;
+                    $i++;
+                }
+            }
 
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
+
+            $DB->insert_records('google_activity_work_task', $status);
         } catch (Exception $e) {
             throw $e;
         } finally {
             $this->service->getClient()->setUseBatch(false);
-            return $records;
+            return [$records, $status];
         }
     }
 
@@ -627,14 +668,14 @@ class googledrive
 
         // Get the groups students.
         foreach ($groupids as $groupid) {
-            $groupstudents[$groupid] = groups_get_members($groupid, $fields = 'u.id, u.firstname, u.lastname, u.email');
+            $groupstudents[$groupid] = groups_get_members($groupid, 'u.id, u.firstname, u.lastname, u.email');
         }
         foreach ($parentrecords as $record) {
             $parentref = $record->folder_id;
-            $records[] = $this->make_file_copies_for_group_members($groupstudents[$record->group_id], $data, $parentref);
+            list($records[], $status[]) = $this->make_file_copies_for_group_members($groupstudents[$record->group_id], $data, $parentref);
         }
 
-        return $records;
+        return [$records, $status];
     }
 
     /**
@@ -656,6 +697,8 @@ class googledrive
             $this->service->getClient()->setUseBatch(true);
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
             $records = [];
+            $status = [];
+            $j = 0;
 
             foreach ($students as $i => $student) {
                 $copyname = $title . '_' . $student->firstname . '_' . $student->lastname . '_' . $student->id;
@@ -667,21 +710,36 @@ class googledrive
                 $file->setParents(array($parentref));
 
                 $file->setTitle($copyname);
-                $filecopy = $this->service->files->copy($data->docid, $file);
+
+                if ($data->document_type == 'folder') {
+                    $file->setMimeType(GDRIVEFILETYPE_FOLDER);
+                    $filecopy = $this->service->files->insert($file);
+                } else {
+                    $filecopy = $this->service->files->copy($data->docid, $file);
+                }
                 $batch->add($filecopy);
+
+                $studentstat = new \stdClass();
+                $studentstat->googleactivityid = $data->id;
+                $studentstat->userid = $student->id;
+
+                $status[] = $studentstat;
             }
 
             // Create the copies
             $results = $batch->execute();
             // New object so it doesn't add to the previous lot.
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
-            $errors = []; //Collect any errors.
+
 
             foreach ($results as $result) {
 
                 if ($result instanceof Google_Service_Exception) {
-                    // printf($result); exit;
-                    //  $errors [] = $result->message;
+                    // Handle error              
+                    $staux =  $status[$i];
+                    $staux->creation_status = json_encode($result->getErrors());
+                    $status[$i] = $staux;
+                    $j++;
                 } else {
 
                     $email = $DB->get_record('user', array('id' => end(explode('_', $result->title))), 'email');
@@ -695,10 +753,11 @@ class googledrive
                                 new Google_Service_Drive_Permission(array(
                                     'type' => 'user',
                                     'role' => $role,
-                                    'additionalRoles' => 'commenter',
+                                    'additionalRoles' => ['commenter'],
                                     'value' => $email->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         } else {
 
@@ -708,8 +767,9 @@ class googledrive
                                     'type' => 'user',
                                     'role' => $role,
                                     'value' => $email->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         }
 
@@ -721,30 +781,28 @@ class googledrive
                         $entityfiledata->permission = $data->permissions;
 
                         $records[] = $entityfiledata;
+
+                        $staux =  $status[$j];
+                        $staux->creation_status = 'OK';
+                        $status[$j] = $staux;
+                        $j++;
                     }
                 }
             }
 
             $results = $batch->execute();
-            // TODO: collect errors
-            // foreach ($results as $result) {
-            //     if ($result instanceof Google_Service_Exception) {
-            //         // Handle error
-            // //        printf($result);
-            //     } else {
-            //   //      printf("Permission ID: %s\n", $result->id);
-            //     }
-            // }
 
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
+
+            $DB->insert_records('google_activity_work_task', $status);
         } catch (Exception $e) {
             throw ($e);
         } finally {
 
             $this->service->getClient()->setUseBatch(false);
-            return $records;
+            return [$records, $status];
         }
     }
 
@@ -794,7 +852,13 @@ class googledrive
                 $copyname = $title . '_' . $groups[$record->group_id] . '_' . $record->group_id; // namefile_namegroup_groupid.
                 $file->setTitle($copyname);
 
-                $filecopy = $this->service->files->copy($data->docid, $file);
+                if ($data->document_type == 'folder') {
+                    $file->setMimeType(GDRIVEFILETYPE_FOLDER);
+                    $filecopy = $this->service->files->insert($file);
+                } else {
+                    $filecopy = $this->service->files->copy($data->docid, $file);
+                }
+
                 $batch->add($filecopy);
             }
 
@@ -803,12 +867,13 @@ class googledrive
             $results = $batch->execute();
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
             $errors = []; //Collect any errors.
-
+            $status = [];
+            $j = 0;
 
             foreach ($results as $result) {
 
                 if ($result instanceof Google_Service_Exception) {
-                    // printf($result); exit;
+                    printf($result);
                     //  $errors [] = $result->message;
                 } else {
                     // Get groupid from file name 
@@ -825,10 +890,11 @@ class googledrive
                                 new Google_Service_Drive_Permission(array(
                                     'type' => 'user',
                                     'role' => $role,
-                                    'additionalRoles' => 'commenter',
+                                    'additionalRoles' => ['commenter'],
                                     'value' => $student->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         } else {
 
@@ -838,8 +904,9 @@ class googledrive
                                     'type' => 'user',
                                     'role' => $role,
                                     'value' => $student->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         }
 
@@ -852,22 +919,46 @@ class googledrive
                         $entityfiledata->groupid = $groupid;
 
                         $records[] = $entityfiledata;
+
+                        $studentstat = new \stdClass();
+                        $studentstat->googleactivityid = $data->id;
+                        $studentstat->userid = $student->id;
+
+                        $status[] = $studentstat;
                     }
                 }
             }
 
             $results = $batch->execute();
 
+
+            foreach ($results as $result) {
+
+                if ($result instanceof Google_Service_Exception) {
+                    // Handle error              
+                    $staux =  $status[$j];
+                    $staux->creation_status = json_encode($result->getErrors());
+                } else {
+                    $staux =  $status[$j];
+                    $staux->creation_status = 'OK';
+                }
+                $status[$j] = $staux;
+                $j++;
+            }
+
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
+            $DB->insert_records('google_activity_work_task', $status);
         } catch (exception $e) {
             throw $e;
         } finally {
             $this->service->getClient()->setUseBatch(false);
-            return $records;
+            return [$records, $status];
         }
     }
+
+
 
     /**
      * 
@@ -890,10 +981,10 @@ class googledrive
         }
         foreach ($parentrecords as $record) {
             $parentref = $record->folder_id;
-            $records[] = $this->make_file_copies_for_group_members($groupingmembers[$record->group_id], $data, $parentref);
+            list($records[], $status[]) = $this->make_file_copies_for_group_members($groupingmembers[$record->group_id], $data, $parentref);
         }
 
-        return $records;
+        return [$records, $status];
     }
 
     public function dist_share_same_grouping_helper($data)
@@ -908,6 +999,7 @@ class googledrive
             $groupingsdetails = get_groupings_details_from_json(json_decode($data->group_grouping_json));
             $groupings = [];
             $groupingstudents = [];
+
 
             foreach ($groupingsdetails as $g) {
 
@@ -944,7 +1036,8 @@ class googledrive
             // Create the copies
             $results = $batch->execute();
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
-            $errors = []; //Collect any errors.
+            $status = [];
+            $j = 0;
 
 
             foreach ($results as $result) {
@@ -967,10 +1060,11 @@ class googledrive
                                 new Google_Service_Drive_Permission(array(
                                     'type' => 'user',
                                     'role' => $role,
-                                    'additionalRoles' => 'commenter',
+                                    'additionalRoles' => ['commenter'],
                                     'value' => $student->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         } else {
 
@@ -980,10 +1074,18 @@ class googledrive
                                     'type' => 'user',
                                     'role' => $role,
                                     'value' => $student->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         }
+
+
+                        $studentstat = new \stdClass();
+                        $studentstat->googleactivityid = $data->id;
+                        $studentstat->userid = $student->id;
+
+                        $status[] = $studentstat;
                     }
 
                     $entityfiledata = new stdClass();
@@ -999,14 +1101,29 @@ class googledrive
 
             $results = $batch->execute();
 
+            foreach ($results as $result) {
+
+                if ($result instanceof Google_Service_Exception) {
+                    // Handle error              
+                    $staux =  $status[$j];
+                    $staux->creation_status = json_encode($result->getErrors());
+                } else {
+                    $staux =  $status[$j];
+                    $staux->creation_status = 'OK';
+                }
+                $status[$j] = $staux;
+                $j++;
+            }
+
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
+            $DB->insert_records('google_activity_work_task', $status);
         } catch (exception $e) {
             throw $e;
         } finally {
             $this->service->getClient()->setUseBatch(false);
-            return $records;
+            return [$records, $status];
         }
     }
 
@@ -1065,8 +1182,8 @@ class googledrive
             // Create the copies.
             $results = $batch->execute();
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
-            $errors = []; //Collect any errors.
-
+            $status = []; // Collects file creation status.
+            $j = 0;
             foreach ($results as $result) {
 
 
@@ -1079,7 +1196,7 @@ class googledrive
                     $groupingid = 0;
                     // Get the folder name to see if it match a group or grouping
                     $parentfoldername = $this->getParentFolderName($result->id);
-                    //print 'File Id: ' . $parentfoldername;
+
                     if (is_grouping($groupings, $parentfoldername)) {
                         $students = $groupstudents['grouping' . '_' . $groupid];
                         $groupingid = end(explode('_', $result->title));
@@ -1098,10 +1215,11 @@ class googledrive
                                 new Google_Service_Drive_Permission(array(
                                     'type' => 'user',
                                     'role' => $role,
-                                    'additionalRoles' => 'commenter',
+                                    'additionalRoles' => ['commenter'],
                                     'value' => $student->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         } else {
 
@@ -1111,10 +1229,17 @@ class googledrive
                                     'type' => 'user',
                                     'role' => $role,
                                     'value' => $student->email,
-                                    'emailMessage' => $emailMessage,
-                                ))
+
+                                )),
+                                ['emailMessage' => $emailMessage]
                             ));
                         }
+
+                        $studentstat = new \stdClass();
+                        $studentstat->googleactivityid = $data->id;
+                        $studentstat->userid = $student->id;
+
+                        $status[] = $studentstat;
                     }
 
                     $entityfiledata = new stdClass();
@@ -1132,15 +1257,130 @@ class googledrive
 
             $results = $batch->execute();
 
+            foreach ($results as $result) {
+
+                if ($result instanceof Google_Service_Exception) {
+                    // Handle error              
+                    $staux =  $status[$j];
+                    $staux->creation_status = json_encode($result->getErrors());
+                } else {
+                    $staux =  $status[$j];
+                    $staux->creation_status = 'OK';
+                }
+                $status[$j] = $staux;
+                $j++;
+            }
+
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
+            $DB->update_record('google_activity_work_task', $status);
         } catch (exception $e) {
-            //var_dump($e);
             throw $e;
         } finally {
             $this->service->getClient()->setUseBatch(false);
-            return $records;
+            return [$records, $status];
+        }
+    }
+
+    public function make_file_group_grouping_folder_helper($data)
+    {
+        global $DB;
+        try {
+            $groupingsdetails = get_groupings_details_from_json(json_decode($data->group_grouping_json));
+            $groupsdetails =  get_groups_details_from_json(json_decode($data->group_grouping_json));
+            $ggdetails = array_merge($groupsdetails, $groupingsdetails);
+
+            foreach ($ggdetails as $g) {
+
+                if ($g->type == 'group') {
+                    $students[] =  groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
+                } else {
+                    $students[] = groups_get_grouping_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
+                }
+            }
+
+            $fileproperties = google_filetypes();
+            list($role, $commenter) = format_permission(($data->permissions));
+            $emailMessage = get_string('emailmessageGoogleNotification', 'googleactivity', $this->set_email_message_content());
+            $records = [];
+
+            $this->service->getClient()->setUseBatch(true);
+            $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
+            // Permission for each student in the group.
+            foreach ($students as $i => $student) {
+                foreach ($student as $std) {
+
+
+                    if ($commenter) {
+
+                        $batch->add($this->service->permissions->insert(
+                            $data->docid,
+                            new Google_Service_Drive_Permission(array(
+                                'type' => 'user',
+                                'role' => $role,
+                                'additionalRoles' => ['commenter'],
+                                'value' => $std->email,
+
+                            )),
+                            ['emailMessage' => $emailMessage]
+                        ));
+                    } else {
+
+                        $batch->add($this->service->permissions->insert(
+                            $data->docid,
+                            new Google_Service_Drive_Permission(array(
+                                'type' => 'user',
+                                'role' => $role,
+                                'value' => $std->email,
+
+                            )),
+                            ['emailMessage' => $emailMessage]
+                        ));
+                    }
+
+                    $studentstat = new \stdClass();
+                    $studentstat->googleactivityid = $data->id;
+                    $studentstat->userid = $std->id;
+
+                    $status[] = $studentstat;
+
+                    $entityfiledata = new stdClass();
+                    $entityfiledata->userid = $std->id;
+                    $entityfiledata->googleactivityid = $data->id;
+                    $entityfiledata->name =  $data->name;
+                    $entityfiledata->url = sprintf($fileproperties[$data->document_type]['linktemplate'], $data->id);;
+                    $entityfiledata->permission = $data->permissions;
+                    $records[] = $entityfiledata;
+                }
+            }
+
+
+            $results = $batch->execute();
+            $j = 0;
+            foreach ($results as $result) {
+
+                if ($result instanceof Google_Service_Exception) {
+                    // Handle error              
+                    $staux =  $status[$j];
+                    $staux->creation_status = json_encode($result->getErrors());
+                } else {
+                    $staux =  $status[$j];
+                    $staux->creation_status = 'OK';
+                }
+                $status[$j] = $staux;
+                $j++;
+            }
+
+            $DB->insert_records('google_activity_files', $records);
+            $data->sharing = 1; // It got here means that at least is being shared with one.
+            $DB->update_record('googleactivity', $data);
+            $DB->update_record('google_activity_work_task', $status);
+        } catch (exception $e) {
+            throw $e;
+        } finally {
+            $this->service->getClient()->setUseBatch(false);
+            return [$records, $status];
         }
     }
 
@@ -1178,7 +1418,8 @@ class googledrive
             }
 
             $studentsaux = array_merge($groupstudents, $groupingstudents);
-
+            $status = [];
+            $j = 0;
             foreach ($studentsaux as $st => $studenting) {
                 $groupid = 0;
                 $groupingid = 0;
@@ -1194,6 +1435,11 @@ class googledrive
                     $student->groupid = $groupid;
                     $student->groupingid = $groupingid;
                     $students[] = $student;
+
+                    $st = new \stdClass();
+                    $st->googleactivityid = $data->id;
+                    $st->userid = $student->id;
+                    $status[] = $st;
                 }
             }
 
@@ -1207,8 +1453,9 @@ class googledrive
                             'role' => $role,
                             'additionalRoles' => ['commenter'],
                             'value' => $student->email,
-                            'emailMessage' => $emailMessage,
-                        ))
+
+                        )),
+                        ['emailMessage' => $emailMessage]
                     ));
                 } else {
 
@@ -1218,8 +1465,9 @@ class googledrive
                             'type' => 'user',
                             'role' => $role,
                             'value' => $student->email,
-                            'emailMessage' => $emailMessage,
-                        ))
+
+                        )),
+                        ['emailMessage' => $emailMessage]
                     ));
                 }
 
@@ -1235,16 +1483,31 @@ class googledrive
                 $records[] = $entityfiledata;
             }
 
-            $results = $batch->execute(); // TODO: Collect errors.
+            $results = $batch->execute();
+
+            foreach ($results as $result) {
+
+                if ($result instanceof Google_Service_Exception) {
+                    // Handle error              
+                    $staux =  $status[$j];
+                    $staux->creation_status = json_encode($result->getErrors());
+                } else {
+                    $staux =  $status[$j];
+                    $staux->creation_status = 'OK';
+                }
+                $status[$j] = $staux;
+                $j++;
+            }
 
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
+            $DB->update_record('google_activity_work_task', $status);
         } catch (Exception $e) {
             throw $e;
         } finally {
             $this->service->getClient()->setUseBatch(false);
-            return $records;
+            return [$records, $status];
         }
     }
 
@@ -1438,13 +1701,13 @@ class googledrive
         $userPermission->setType($type);
 
         if ($commenter) {
-            $userPermission->setAdditionalRoles(array('commenter'));
+            $userPermission->setAdditionalRoles(['commenter']);
         }
 
         try {
             if ($is_teacher) {
                 $service->permissions->insert($fileId, $userPermission, array('sendNotificationEmails' => false));
-            } else if ($this->googledocinstance != null) {
+            } else if ($this->googleactivityinstance != null) {
                 $emailMessage = get_string(
                     'emailmessageGoogleNotification',
                     'googledocs',
@@ -1496,7 +1759,7 @@ class googledrive
     {
         global $DB;
         $sql = "SELECT id FROM mdl_course_modules WHERE course = :courseid AND instance = :instanceid;";
-        $params = ['courseid' => $this->googledocinstance->course, 'instanceid' => $this->googledocinstance->id];
+        $params = ['courseid' => $this->googleactivityinstance->course, 'instanceid' => $this->googleactivityinstance->id];
         $cm = $DB->get_record_sql($sql, $params);
         $url = new moodle_url('/mod/googleactivity/view.php?', ['id' => $cm->id]);
         $a = (object) [

@@ -54,6 +54,11 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configtext('mod_googleactivity/referrer', get_string('googleactivity_referrer', 'googleactivity'),
             get_string('googleactivity_referrer_key_desc', 'googleactivity'), ''));
 
+    
+    $settings->add(new admin_setting_configtext('mod_googleactivity/domain', get_string('googleactivity_domain', 'googleactivity'),
+            get_string('googleactivity_domain_desc', 'googleactivity'), 'gmail.com'));
+
+
     $menu = array();
     foreach (core_component::get_plugin_list('assignfeedback') as $type => $notused) {
         $visible = !get_config('assignfeedback_' . $type, 'disabled');

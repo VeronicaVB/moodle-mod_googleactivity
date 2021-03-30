@@ -97,44 +97,43 @@ trait create_students_files
         $teachers = get_enrolled_teachers($data->course);
         $students = json_decode($students);
 
-        if ($data->distribution == 'group_copy' || $data->distribution == 'dist_share_same_group') {
-            $records = $gdrive->dist_share_same_group_helper($data);
+        if (($data->distribution == 'group_copy'  || $data->distribution == 'dist_share_same_group')) {
+            list($records, $status) = $gdrive->dist_share_same_group_helper($data);
         }
 
         switch ($data->distribution) {
             case 'std_copy':
-                $records = $gdrive->make_file_copies($students, $data);
+                list($records, $status) = $gdrive->make_file_copies($students, $data);
                 break;
             case 'dist_share_same':
-                $records = $gdrive->dist_share_same_helper($students, $data);
+                list($records, $status) = $gdrive->dist_share_same_helper($students, $data);
                 break;
             case 'std_copy_group':
-                $records = $gdrive->make_file_copy_for_groups($data);
+                list($records, $status) = $gdrive->make_file_copy_for_groups($data);
                 break;
             case 'std_copy_grouping':
-                $records = $gdrive->make_file_copy_for_grouping($data);
+                list($records, $status) = $gdrive->make_file_copy_for_grouping($data);
                 break;
             case 'dist_share_same_grouping':
-                $records = $gdrive->dist_share_same_grouping_helper($data);
+                list($records, $status) = $gdrive->dist_share_same_grouping_helper($data);
                 break;
             case 'std_copy_group_grouping':
-                $records = $gdrive->make_file_copy_for_groups($data, true);
+                list($records, $status) = $gdrive->make_file_copy_for_groups($data, true);
                 break;
-            case 'group_grouping_copy': 
-                $records = $gdrive->make_file_group_grouping_helper($data);
+            case 'group_grouping_copy':
+                if ($data->document_type == 'folder')
+                    list($records, $status) = ($data->document_type != 'folder') ? $gdrive->make_file_group_grouping_helper($data) : $gdrive->make_file_group_grouping_folder_helper($data);
                 break;
             case 'dist_share_same_group_grouping':
-                $records = $gdrive->dist_share_same_group_grouping_herper($data);
-                break;
-            default:
-                # code...
+                list($records, $status) = $gdrive->dist_share_same_group_grouping_herper($data);
                 break;
         }
 
 
 
         return array(
-            'records' => json_encode($records, JSON_UNESCAPED_UNICODE)
+            'records' => json_encode($records, JSON_UNESCAPED_UNICODE),
+            'status' => json_encode($status, JSON_UNESCAPED_UNICODE)
         );
     }
 
@@ -149,6 +148,7 @@ trait create_students_files
         return new external_single_structure(
             array(
                 'records' => new external_value(PARAM_RAW, 'Records created'),
+                'status' =>  new external_value(PARAM_RAW, 'Status of the file creation')
             )
         );
     }

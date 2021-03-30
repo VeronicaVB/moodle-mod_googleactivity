@@ -561,3 +561,14 @@ function is_grouping($groupings, $foldername) {
 
     return false;
 }
+
+// function error_handler($details, $args, $message) {
+
+//     foreach ($args as $arg) {
+//         $status = new \stdClass();
+//         $status->googleactivityid = $data->id;
+//         $status->userid = $arg->
+//         $status->creation_status = $message;
+//     }
+
+// }
