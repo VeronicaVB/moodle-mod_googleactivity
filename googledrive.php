@@ -487,7 +487,7 @@ class googledrive
             $results = $batch->execute();
             // New object so it doesn't add to the previous lot.
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
-
+            $fileids = [];
             foreach ($results as $result) {
 
                 if ($result instanceof Google_Service_Exception) {
@@ -497,7 +497,7 @@ class googledrive
                     $status[$i] = $staux;
                     $i++;
                 } else {
-
+                    $fileids[] = $result->id; // Collect the file ids to use later when giving permission to the teacher.
                     $value = new \stdClass();
                     $value->email = $this->get_user_email($students, $result->title);
 
@@ -547,11 +547,11 @@ class googledrive
             }
 
             $results = $batch->execute();
+            $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
 
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
-
             $DB->insert_records('google_activity_work_task', $status);
         } catch (Exception $e) {
             throw ($e);
@@ -631,7 +631,6 @@ class googledrive
                     $status[$i] = $staux;
                     $i++;
                 } else {
-
                     $staux =  $status[$i];
                     $staux->creation_status = 'OK';
                     $status[$i] = $staux;
@@ -639,10 +638,23 @@ class googledrive
                 }
             }
 
+            // Give access to teachers in the course.
+            foreach ($teachers as $teacher) {
+
+                $batch->add($this->service->permissions->insert(
+                    $data->docid,
+                    new Google_Service_Drive_Permission(array(
+                        'type' => 'user',
+                        'role' => 'writer',
+                        'value' => $teacher->email,
+                    )),
+                    ['sendNotificationEmails' => false]
+                ));
+            }
+
             $DB->insert_records('google_activity_files', $records);
             $data->sharing = 1; // It got here means that at least is being shared with one.
             $DB->update_record('googleactivity', $data);
-
             $DB->insert_records('google_activity_work_task', $status);
         } catch (Exception $e) {
             throw $e;
@@ -653,10 +665,10 @@ class googledrive
     }
 
     // Make files when distribution is std_copy_group or std_copy_group_grouping.
-    public function make_file_copy_for_groups($data, $fromgg = false)
+    public function make_file_copy_for_groups($data, $fromgg = false, $teachers)
     {
         // Make the group's folder. The folder is the parent of the file
-        $parentrecords =  $this->make_group_folder($data, $fromgg);
+        $parentrecords =  $this->make_group_folder($data, $fromgg, $teachers);
 
         $groupdetails = (!$fromgg) ? get_groups_details_from_json(json_decode($data->group_grouping_json)) : $this->merge_groups($data);
         $records = [];
@@ -668,8 +680,10 @@ class googledrive
 
         // Get the groups students.
         foreach ($groupids as $groupid) {
-            $groupstudents[$groupid] = groups_get_members($groupid, 'u.id, u.firstname, u.lastname, u.email');
+
+            $groupstudents[$groupid] = get_students_from_group($groupid, $teachers); //roups_get_members($groupid, 'u.id, u.firstname, u.lastname, u.email');
         }
+
         foreach ($parentrecords as $record) {
             $parentref = $record->folder_id;
             list($records[], $status[]) = $this->make_file_copies_for_group_members($groupstudents[$record->group_id], $data, $parentref);
@@ -730,20 +744,17 @@ class googledrive
             $results = $batch->execute();
             // New object so it doesn't add to the previous lot.
             $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
-
+            $fileids = [];
 
             foreach ($results as $result) {
 
                 if ($result instanceof Google_Service_Exception) {
                     // Handle error              
-                    $staux =  $status[$i];
-                    $staux->creation_status = json_encode($result->getErrors());
-                    $status[$i] = $staux;
-                    $j++;
+
                 } else {
 
                     $email = $DB->get_record('user', array('id' => end(explode('_', $result->title))), 'email');
-
+                    $fileids[] = $result->id;
                     if ($email) {
 
                         if ($commenter) {
@@ -812,14 +823,14 @@ class googledrive
      * finally give access to the users in the groups.
      * 
      */
-    public function dist_share_same_group_helper($data)
+    public function dist_share_same_group_helper($data, $teachers)
     {
         global $DB;
 
         try {
 
             // Make the group's folder. The folder is the parent of the file
-            $parentrecords =  $this->make_group_folder($data);
+            $parentrecords =  $this->make_group_folder($data, false, $teachers);
 
             $groupdetails = get_groups_details_from_json(json_decode($data->group_grouping_json));
             $groups = [];
@@ -828,7 +839,7 @@ class googledrive
             foreach ($groupdetails as $g) {
 
                 $groups[$g->id] = $g->name;
-                $groupstudents[$g->id] =  groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
+                $groupstudents[$g->id] =  get_students_from_group($g->id, $teachers); // groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
             }
 
             // Set the files details.
@@ -963,10 +974,10 @@ class googledrive
     /**
      * 
      */
-    public function make_file_copy_for_grouping($data)
+    public function make_file_copy_for_grouping($data, $teachers)
     {
         // Make the groupings folder. The folder is the parent of the file
-        $parentrecords =  $this->make_group_folder($data);
+        $parentrecords =  $this->make_group_folder($data, false, $teachers);
 
         $groupingdetails = get_groupings_details_from_json(json_decode($data->group_grouping_json));
         $records = [];
@@ -977,8 +988,9 @@ class googledrive
 
         // Get the members of each grouping
         foreach ($groupingds as $groupingid) {
-            $groupingmembers[$groupingid] = groups_get_grouping_members($groupingid, 'u.id, u.firstname, u.lastname, u.email');
+            $groupingmembers[$groupingid] = get_students_from_grouping($groupingid, $teachers);
         }
+
         foreach ($parentrecords as $record) {
             $parentref = $record->folder_id;
             list($records[], $status[]) = $this->make_file_copies_for_group_members($groupingmembers[$record->group_id], $data, $parentref);
@@ -987,14 +999,14 @@ class googledrive
         return [$records, $status];
     }
 
-    public function dist_share_same_grouping_helper($data)
+    public function dist_share_same_grouping_helper($data, $teachers)
     {
         global $DB;
 
         try {
 
             // Make the group's folder. The folder is the parent of the file
-            $parentrecords =  $this->make_group_folder($data);
+            $parentrecords =  $this->make_group_folder($data, false, $teachers);
 
             $groupingsdetails = get_groupings_details_from_json(json_decode($data->group_grouping_json));
             $groupings = [];
@@ -1004,7 +1016,7 @@ class googledrive
             foreach ($groupingsdetails as $g) {
 
                 $groupings[$g->id] = $g->name;
-                $groupingstudents[$g->id] =  groups_get_grouping_members($g->id,  'u.id, u.firstname, u.lastname, u.email');
+                $groupingstudents[$g->id] =  get_students_from_grouping($g->id, $teachers); //groups_get_grouping_members($g->id,  'u.id, u.firstname, u.lastname, u.email');
             }
 
             // Set the files details.
@@ -1027,8 +1039,14 @@ class googledrive
 
                 $copyname = $title . '_' . $groupings[$record->group_id] . '_' . $record->group_id; // namefile_namegrouping_groupid.
                 $file->setTitle($copyname);
+              
+                if ($data->document_type == 'folder') {
+                    $file->setMimeType(GDRIVEFILETYPE_FOLDER);
+                    $filecopy = $this->service->files->insert($file);
+                } else {
 
-                $filecopy = $this->service->files->copy($data->docid, $file);
+                    $filecopy = $this->service->files->copy($data->docid, $file);
+                }
                 $batch->add($filecopy);
             }
 
@@ -1050,7 +1068,7 @@ class googledrive
                     $groupingid = end(explode('_', $result->title));
                     $students = $groupingstudents[$groupingid];
 
-                    // Permission for each student in the group.
+                    // Permission for each member in the group. Both students and teachers have the same file. No need to process them separately.
                     foreach ($students as $i => $student) {
 
                         if ($commenter) {
@@ -1127,7 +1145,7 @@ class googledrive
         }
     }
 
-    public function make_file_group_grouping_helper($data)
+    public function make_file_group_grouping_helper($data, $teachers)
     {
         global $DB;
 
@@ -1138,7 +1156,7 @@ class googledrive
             $ggdetails = array_merge($groupsdetails, $groupingsdetails);
 
             // Make group and grouping folders.
-            list($parentrecords, $groupings) = $this->make_group_grouping_folder($data, $ggdetails);
+            list($parentrecords, $groupings) = $this->make_group_grouping_folder($data, $ggdetails, $teachers);
 
             $groups = [];
             $groupstudents = [];
@@ -1148,9 +1166,9 @@ class googledrive
                 $groups[$g->id] = $g->name;
 
                 if ($g->type == 'group') {
-                    $groupstudents[$g->type . '_' . $g->id] =  groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
+                    $groupstudents[$g->type . '_' . $g->id] =  get_students_from_group($g->id, $teachers); //groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
                 } else {
-                    $groupstudents[$g->type . '_' . $g->id] = groups_get_grouping_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
+                    $groupstudents[$g->type . '_' . $g->id] = get_students_from_grouping($g->id, $teachers); //groups_get_grouping_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
                 }
             }
 
@@ -1185,7 +1203,6 @@ class googledrive
             $status = []; // Collects file creation status.
             $j = 0;
             foreach ($results as $result) {
-
 
                 if ($result instanceof Google_Service_Exception) {
                     // printf($result); exit;
@@ -1385,7 +1402,7 @@ class googledrive
     }
 
 
-    public function dist_share_same_group_grouping_herper($data)
+    public function dist_share_same_group_grouping_herper($data, $teachers)
     {
 
         global $DB;
@@ -1411,9 +1428,9 @@ class googledrive
                 $groups[$g->id] = $g->name;
 
                 if ($g->type == 'group') {
-                    $groupstudents[$g->type . '_' . $g->id] =  groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
+                    $groupstudents[$g->type . '_' . $g->id] =  get_students_from_group($g->id, $teachers); //groups_get_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
                 } else {
-                    $groupingstudents[$g->type . '_' . $g->id] = groups_get_grouping_members($g->id, 'u.id, u.firstname, u.lastname, u.email');
+                    $groupingstudents[$g->type . '_' . $g->id] = get_students_from_grouping($g->id, $teachers);
                 }
             }
 
@@ -1533,11 +1550,10 @@ class googledrive
      * if its grouping groups a folder are create d based on the group.
      */
 
-    public function make_group_folder($data, $fromgg = false)
+    public function make_group_folder($data, $fromgg = false, $teachers)
     {
         global $DB;
         $isgrouping = strpos($data->distribution, 'grouping');
-
 
         if ($isgrouping !== false && !$fromgg) {
             // Create the folders with the grouping name.
@@ -1573,19 +1589,40 @@ class googledrive
             $results = $batch->execute();
             $ids = [];
 
-            foreach ($results as $result) {
+            $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
 
+            foreach ($results as $result) {
                 if ($result instanceof Google_Service_Exception) {
                 } else {
-
                     $r = new stdClass();
                     $r->group_id = end(explode('_', $result->title));
                     $r->googleactivityid = $data->id;
                     $r->folder_id = $result->id;
                     $DB->insert_record('google_activity_folders', $r);
                     $ids[] = $r;
+
+                    if (
+                        $data->distribution == 'std_copy_grouping' || $data->distribution == 'dist_share_same_grouping'
+                        || $data->distribution == 'grouping_copy'
+                    ) {
+                        $groupteachers = get_teachers_from_grouping($r->group_id, $teachers);
+                    } else {
+                        $groupteachers = get_teachers_from_group($r->group_id, $teachers);
+                    }
+                    foreach ($groupteachers as $q => $teacher) {
+                        $batch->add($this->service->permissions->insert(
+                            $r->folder_id,
+                            new Google_Service_Drive_Permission(array(
+                                'type' => 'user',
+                                'role' => 'writer',
+                                'value' => $teacher->email,
+                            )),
+                            ['sendNotificationEmails' => true] // TODO: validar que sea gmail 
+                        ));
+                    }
                 }
             }
+            $batch->execute();
         } catch (Exception $e) {
             throw $e;
         } finally {
@@ -1594,7 +1631,7 @@ class googledrive
         }
     }
 
-    public function make_group_grouping_folder($data, $ggdetails)
+    public function make_group_grouping_folder($data, $ggdetails, $teachers)
     {
         global $DB;
 
@@ -1616,7 +1653,14 @@ class googledrive
                     'parents' => array($parentRef),
                     'uploadType' => 'multipart'
                 ));
+                // Get the groups details to allow teachers to access the group folder.
 
+                if ($g->type == 'group') {
+                    $gr = new \stdClass();
+                    $gr->groupid = $g->id;
+                    $gr->foldername = $g->name . '_' . $g->id;
+                    $groupfolderdetails[] = $gr;
+                }
                 $batch->add($this->service->files->insert($fileMetadata, array('fields' => 'id, title')));
             }
 
@@ -1624,6 +1668,7 @@ class googledrive
             $ids = [];
             $groupings = [];
             $groupingsdetails = get_groupings_details_from_json(json_decode($data->group_grouping_json));
+            $batch = new Google_Http_Batch($this->service->getClient(), true, $this->service->root_url, '/batch/drive/v2');
 
             foreach ($results as $result) {
 
@@ -1637,8 +1682,24 @@ class googledrive
                     $DB->insert_record('google_activity_folders', $r);
                     $ids[] = $r;
 
-                    // Get the groupings to be able to save in DB when given access to users.
+                    foreach ($groupfolderdetails as $g => $gro) {
+                        if ($gro->foldername ==  $result->title) {
+                            $groupteachers = get_teachers_from_group($gro->groupid, $teachers);
 
+                            foreach ($groupteachers as $q => $teacher) {
+                                $batch->add($this->service->permissions->insert(
+                                    $result->id,
+                                    new Google_Service_Drive_Permission(array(
+                                        'type' => 'user',
+                                        'role' => 'writer',
+                                        'value' => $teacher->email,
+                                    )),
+                                    ['sendNotificationEmails' => true] // TODO: validar que sea gmail 
+                                ));
+                            }
+                        }
+                    }
+                    // Get the groupings to be able to save in DB when given access to users.
                     foreach ($groupingsdetails as $grouping) {
                         $name = $grouping->name . '_' . $grouping->id;
                         if ($name == $result->title) {
@@ -1647,8 +1708,30 @@ class googledrive
                             $gg->foldername = $name;
                             $gg->groupingid = $grouping->id;
                             $groupings[$grouping->id] = $gg;
+
+                            // Give access to teachers in grouping.
+                            $groupingteachers = get_teachers_from_grouping($grouping->id, $teachers);
+
+                            foreach ($groupingteachers as $q => $teacher) {
+                                $batch->add($this->service->permissions->insert(
+                                    $result->id,
+                                    new Google_Service_Drive_Permission(array(
+                                        'type' => 'user',
+                                        'role' => 'writer',
+                                        'value' => $teacher->email,
+                                    )),
+                                    ['sendNotificationEmails' => true] // TODO: validar que sea gmail 
+                                ));
+                            }
                         }
                     }
+                }
+            }
+            $resultado = $batch->execute();
+
+            foreach ($resultado as $result) {
+                if ($result instanceof Google_Service_Exception) {
+                    printf($result);
                 }
             }
         } catch (Exception $e) {
@@ -1879,6 +1962,34 @@ class googledrive
         } finally {
             //$this->service->getClient()->setUseBatch(false); Dont close the batch otherwise it will only process one.
             return $parentfoldername;
+        }
+    }
+
+    // Give access to teachers at folder level. 
+    public function permission_for_teachers($distribution, $teachers, $folderid)
+    {
+        try {
+            if ($distribution == 'std_copy'  || $distribution == 'dist_share_same') {
+                $this->permission_for_teachers_helper($teachers, $folderid);
+            }
+        } catch (\Exception $e) {
+            throw $e;
+        }
+    }
+
+    private function permission_for_teachers_helper($teachers, $folderid)
+    {
+        foreach ($teachers as $teacher) {
+
+            $this->service->permissions->insert(
+                $folderid,
+                new Google_Service_Drive_Permission(array(
+                    'type' => 'user',
+                    'role' => 'writer',
+                    'value' => $teacher->email,
+                )),
+                ['sendNotificationEmails' => true]  // TODO: check if the email is a google account to send notification or not.
+            );
         }
     }
 }

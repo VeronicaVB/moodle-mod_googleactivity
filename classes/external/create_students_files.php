@@ -93,13 +93,17 @@ trait create_students_files
         $gdrive = new \googledrive($context->id, false, false, true, false, $data);
         list($data->role, $data->commenter) = format_permission($data->permissions);
 
-        // Get all teachers in the course.
-        $teachers = get_enrolled_teachers($data->course);
         $students = json_decode($students);
+        $teachers = get_enrolled_teachers($data->course);
 
         if (($data->distribution == 'group_copy'  || $data->distribution == 'dist_share_same_group')) {
-            list($records, $status) = $gdrive->dist_share_same_group_helper($data);
+            list($records, $status) = $gdrive->dist_share_same_group_helper($data, $teachers);
         }
+        
+        if (($data->distribution == 'grouping_copy'  || $data->distribution == 'dist_share_same_grouping')) {
+            list($records, $status) = $gdrive->dist_share_same_grouping_helper($data, $teachers);
+        }
+
 
         switch ($data->distribution) {
             case 'std_copy':
@@ -109,27 +113,21 @@ trait create_students_files
                 list($records, $status) = $gdrive->dist_share_same_helper($students, $data);
                 break;
             case 'std_copy_group':
-                list($records, $status) = $gdrive->make_file_copy_for_groups($data);
+                list($records, $status) = $gdrive->make_file_copy_for_groups($data, false, $teachers);
                 break;
             case 'std_copy_grouping':
-                list($records, $status) = $gdrive->make_file_copy_for_grouping($data);
-                break;
-            case 'dist_share_same_grouping':
-                list($records, $status) = $gdrive->dist_share_same_grouping_helper($data);
+                list($records, $status) = $gdrive->make_file_copy_for_grouping($data, $teachers);
                 break;
             case 'std_copy_group_grouping':
-                list($records, $status) = $gdrive->make_file_copy_for_groups($data, true);
+                list($records, $status) = $gdrive->make_file_copy_for_groups($data, true, $teachers);
                 break;
             case 'group_grouping_copy':
-                if ($data->document_type == 'folder')
-                    list($records, $status) = ($data->document_type != 'folder') ? $gdrive->make_file_group_grouping_helper($data) : $gdrive->make_file_group_grouping_folder_helper($data);
+                list($records, $status) = ($data->document_type != 'folder') ? $gdrive->make_file_group_grouping_helper($data, $teachers) : $gdrive->make_file_group_grouping_folder_helper($data);
                 break;
             case 'dist_share_same_group_grouping':
-                list($records, $status) = $gdrive->dist_share_same_group_grouping_herper($data);
+                list($records, $status) = $gdrive->dist_share_same_group_grouping_herper($data, $teachers);
                 break;
         }
-
-
 
         return array(
             'records' => json_encode($records, JSON_UNESCAPED_UNICODE),

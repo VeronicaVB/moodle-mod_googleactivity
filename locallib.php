@@ -242,17 +242,17 @@ function get_users_in_group($conditionsjson)
 function get_users_in_grouping($conditionsjson)
 {
     global $COURSE;
-    
+
     $courseusers = get_role_users(5, context_course::instance($COURSE->id));
     $groupingmembers = get_grouping_members_ids($conditionsjson);
-   
+
     foreach ($courseusers as $user) {
         if (in_array($user->id, $groupingmembers)) {
             $users[] = $user;
         }
     }
 
-  
+
     return $users;
 }
 
@@ -371,11 +371,11 @@ function get_id_detail_from_json($groupgroupingjson, $type)
  * Group_grouping_condition: values to form the json
  */
 function get_students_based_on_group_grouping_distribution($dist, $group_grouping_condition)
-{   
+{
     $jsongroup = new stdClass();
-    $jsongroup->c = $group_grouping_condition;    
-   
-    if ($dist == 'dist_share_same_grouping' || $dist == 'grouping_copy' || $dist == 'std_copy_grouping') {      
+    $jsongroup->c = $group_grouping_condition;
+
+    if ($dist == 'dist_share_same_grouping' || $dist == 'grouping_copy' || $dist == 'std_copy_grouping') {
         $students = get_users_in_grouping(json_encode($jsongroup));
     } else {
         $students = get_users_in_group(json_encode($jsongroup));
@@ -390,7 +390,8 @@ function get_students_based_on_group_grouping_distribution($dist, $group_groupin
  * @param type $courseid
  * @return type
  */
-function get_students_group_ids($userid, $courseid) {
+function get_students_group_ids($userid, $courseid)
+{
 
     $ids = groups_get_user_groups($courseid, $userid)[0];
     $group_ids = '';
@@ -404,9 +405,6 @@ function get_students_group_ids($userid, $courseid) {
 
 
 //********************************************END GROUP AND GROUPING HELPERS ***************************************/
-function oauth_ready()
-{
-}
 
 function get_enrolled_students($courseid)
 {
@@ -443,20 +441,104 @@ function get_enrolled_teachers($courseid)
         '',
         $context,
         false,
-        'ra.id ,  u.email, u.lastname, u.firstname',
+        'ra.id ,  u.id, u.email, u.lastname, u.firstname',
         'ra.id ASC'
     );
 
     foreach ($courseteachers as $teacher) {
 
         if ($teacher->id != $USER->id && in_array($teacher->roleid, $roles)) {
-            $teachers[] = $teacher;
+            $teachers[$teacher->id] = $teacher;
         }
     }
 
     return $teachers;
 }
 
+
+function get_teachers_from_group($groupid, $teachers)
+{
+
+    $members = groups_get_members($groupid, 'u.id, u.firstname, u.lastname, u.email');
+    $groupteachers = [];
+    $teacherids = array_keys($teachers);
+
+    foreach ($members as $memberid => $member) {
+        if (in_array($memberid, $teacherids)) {
+            $groupteachers[] = $member;
+        }
+    }
+
+    return $groupteachers;
+}
+
+function get_students_from_group($groupid, $teachers)
+{
+
+    $members = groups_get_members($groupid, 'u.id, u.firstname, u.lastname, u.email');
+    $groupstudents = [];
+    $teacherids = array_keys($teachers);
+
+    foreach ($members as $memberid => $member) {
+        if (!in_array($memberid, $teacherids)) {
+            $groupstudents[] = $member;
+        }
+    }
+
+    return $groupstudents;
+}
+
+function get_students_teachers_from_grouping($groupingid, $teachers)
+{
+
+    $members = groups_get_grouping_members($groupingid, 'u.id, u.firstname, u.lastname, u.email');
+
+    $groupingstudents = [];
+    $groupingteachers = [];
+    $teacherids = array_keys($teachers);
+
+    foreach ($members as $memberid => $member) {
+
+        if (in_array($memberid, $teacherids)) {
+            $groupingteachers [] = $member;
+        } else {
+            $groupingstudents [] = $member;
+        }
+    }
+    return [$groupingstudents, $groupingteachers];
+}
+
+// Only return grouping members that are students in the course.
+function get_students_from_grouping($groupingid, $teachers) {
+    
+    $groupingstudents = [];
+    $teacherids = array_keys($teachers);
+    $members = groups_get_grouping_members($groupingid, 'u.id, u.firstname, u.lastname, u.email');
+    
+    foreach ($members as $memberid => $member) {
+
+        if (!in_array($memberid, $teacherids)) {
+            $groupingstudents [] = $member;
+        } 
+    }
+    return $groupingstudents;
+}
+
+
+function get_teachers_from_grouping($groupingid, $teachers) {
+    $members = groups_get_grouping_members($groupingid, 'u.id, u.firstname, u.lastname, u.email');
+    $groupingteachers = [];
+    $teacherids = array_keys($teachers);
+
+    foreach ($members as $memberid => $member) {
+
+        if (in_array($memberid, $teacherids)) {
+            $groupingteachers [] = $member;
+        } 
+    }
+
+    return   $groupingteachers;
+}
 /**
  * Distribution types
  * Possible combinations:
@@ -528,16 +610,16 @@ function save_instance(
     $file,
     $sharedlink = '',
     $folderid,
-    $owncopy='false',
+    $owncopy = 'false',
     $dist,
     $intro = ''
 ) {
     global $USER, $DB;
 
-    if(!$owncopy || $googleactivity->distribution == 'group_copy'){
+    if (!$owncopy || $googleactivity->distribution == 'group_copy') {
         $googleactivity->google_doc_url = $sharedlink;
     }
-    
+
     $googleactivity->docid = $file->id;
     $googleactivity->parentfolderid = $folderid;
     $googleactivity->userid = $USER->id;
@@ -552,7 +634,8 @@ function save_instance(
 }
 
 // WHen distribution is group_grouping we need to know if its a grouping to get the id.
-function is_grouping($groupings, $foldername) {
+function is_grouping($groupings, $foldername)
+{
     foreach ($groupings as $grouping) {
         if ($grouping->foldername == $foldername) {
             return true;
@@ -561,14 +644,3 @@ function is_grouping($groupings, $foldername) {
 
     return false;
 }
-
-// function error_handler($details, $args, $message) {
-
-//     foreach ($args as $arg) {
-//         $status = new \stdClass();
-//         $status->googleactivityid = $data->id;
-//         $status->userid = $arg->
-//         $status->creation_status = $message;
-//     }
-
-// }
