@@ -76,7 +76,6 @@ function googleactivity_add_instance(stdClass $googleactivity, mod_googleactivit
 
     try {
         // print_object($googleactivity);exit;
-
         $googleactivity->timecreated = time();
 
         $context = context_course::instance($googleactivity->course);

@@ -104,6 +104,7 @@ $string['googleactivity_referrer'] = 'HTTP referrers';
 $string['googleactivity_referrer_key_desc'] = 'Specify which Web Sites can see the API Key. The URL has to match the URL set in the Website Restrictions section in the developers console';
 $string['googleactivity_domain'] = 'Set hosted domain';
 $string['googleactivity_domain_desc'] = 'Specify the hosted name';
+$string['defaultdomain'] = 'gmail.com';
 $string['groupheader'] = 'Groups';
 $string['clicktoopen'] = 'Click {$a} to open resource';
 $string['grading'] = 'grade';

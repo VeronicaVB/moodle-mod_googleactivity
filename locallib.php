@@ -644,3 +644,15 @@ function is_grouping($groupings, $foldername)
 
     return false;
 }
+
+// In case the teacher has an email account that is not a gmail or from the domain specified. send notificiation
+function send_notification($email) {
+    $cfgdom = (get_config('mod_googleactivity'))->domain;
+    $configdomain = empty( $cfgdom) ? get_string('defaultdomain', 'googleactivity') : $cfgdom;
+
+    $domain = explode('@', $email);
+    $userdomain = array_pop($domain);
+
+    return $configdomain != $userdomain;
+
+}

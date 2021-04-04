@@ -68,6 +68,7 @@ class googledrive
     private $api_key;
     private $referrer;
     private $googleactivityinstance;
+    private $domain;
 
     private $batch;
 
@@ -98,6 +99,7 @@ class googledrive
         }
 
         $this->api_key = (get_config('mod_googleactivity'))->googleactivity_api_key;
+        $this->domain = (get_config('mod_googleactivity'))->domain;
 
         // Get the Google client.
         $this->client = get_google_client();
@@ -106,7 +108,7 @@ class googledrive
         $this->client->setClientSecret($this->issuer->get('clientsecret'));
         $this->client->setAccessType('offline');
         $this->client->setApprovalPrompt('force');
-        $this->client->setHostedDomain((get_config('mod_googleactivity'))->domain);
+        $this->client->setHostedDomain($this->domain);
 
         $returnurl = new moodle_url(self::CALLBACKURL);
         $this->client->setRedirectUri($returnurl->out(false));
@@ -1554,6 +1556,7 @@ class googledrive
     {
         global $DB;
         $isgrouping = strpos($data->distribution, 'grouping');
+        
 
         if ($isgrouping !== false && !$fromgg) {
             // Create the folders with the grouping name.
@@ -1610,6 +1613,7 @@ class googledrive
                         $groupteachers = get_teachers_from_group($r->group_id, $teachers);
                     }
                     foreach ($groupteachers as $q => $teacher) {
+                        $sendnotification = send_notification($teacher->email);
                         $batch->add($this->service->permissions->insert(
                             $r->folder_id,
                             new Google_Service_Drive_Permission(array(
@@ -1617,7 +1621,7 @@ class googledrive
                                 'role' => 'writer',
                                 'value' => $teacher->email,
                             )),
-                            ['sendNotificationEmails' => true] // TODO: validar que sea gmail 
+                            ['sendNotificationEmails' => $sendnotification] 
                         ));
                     }
                 }
@@ -1687,6 +1691,7 @@ class googledrive
                             $groupteachers = get_teachers_from_group($gro->groupid, $teachers);
 
                             foreach ($groupteachers as $q => $teacher) {
+                                $sendnotification = send_notification($teacher->email);
                                 $batch->add($this->service->permissions->insert(
                                     $result->id,
                                     new Google_Service_Drive_Permission(array(
@@ -1694,7 +1699,7 @@ class googledrive
                                         'role' => 'writer',
                                         'value' => $teacher->email,
                                     )),
-                                    ['sendNotificationEmails' => true] // TODO: validar que sea gmail 
+                                    ['sendNotificationEmails' =>  $sendnotification] 
                                 ));
                             }
                         }
@@ -1713,6 +1718,7 @@ class googledrive
                             $groupingteachers = get_teachers_from_grouping($grouping->id, $teachers);
 
                             foreach ($groupingteachers as $q => $teacher) {
+                                $sendnotification = send_notification($teacher->email);
                                 $batch->add($this->service->permissions->insert(
                                     $result->id,
                                     new Google_Service_Drive_Permission(array(
@@ -1720,7 +1726,7 @@ class googledrive
                                         'role' => 'writer',
                                         'value' => $teacher->email,
                                     )),
-                                    ['sendNotificationEmails' => true] // TODO: validar que sea gmail 
+                                    ['sendNotificationEmails' => $sendnotification]
                                 ));
                             }
                         }
@@ -1980,15 +1986,15 @@ class googledrive
     private function permission_for_teachers_helper($teachers, $folderid)
     {
         foreach ($teachers as $teacher) {
-
-            $this->service->permissions->insert(
+            $sendnotification = send_notification($teacher->email);
+            $this->service->permissions->insert(    
                 $folderid,
                 new Google_Service_Drive_Permission(array(
                     'type' => 'user',
                     'role' => 'writer',
                     'value' => $teacher->email,
                 )),
-                ['sendNotificationEmails' => true]  // TODO: check if the email is a google account to send notification or not.
+                ['sendNotificationEmails' => $sendnotification] 
             );
         }
     }
